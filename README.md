@@ -28,7 +28,7 @@ condition {
 
 }    
 ```
-## if statemant
+## if statement
 ```
 condition ?{    #then
 

@@ -39,13 +39,16 @@ char* read_lexeme(FILE* source) {
     return buffer;
 }
 
-Token get_next_token(FILE *source){
+Token get_next_token(FILE *source, int line){
     char ch;
     Token token;
-    char buffer[256];
     // skip all whitespaces
     do{
         ch = fgetc(source);
+        // Check if it a new line
+        if(ch == '\n'){ 
+            line ++;
+        }
     }while(isspace(ch));
     // check if end of file
     if (feof(source)) {
@@ -109,59 +112,169 @@ Token get_next_token(FILE *source){
         if (ch == '=') {
             token.type = TOKEN_DIVISION_ASSIGN;
             token.lexeme = "/=";
-        } else {
+        } else if (ch == '/'){
+            ch = fgetc(source);
+            if (ch == '=') {
+                token.type = TOKEN_DIV_ASSIGN;
+                token.lexeme = "//=";
+            } else {
+                ungetc(ch, source); // Put back the character that is not part of this token
+                token.type = TOKEN_DIV;
+                token.lexeme = "//";
+            }
+           
+        }else{
             ungetc(ch, source); // Put back the character that is not part of this token
             token.type = TOKEN_DIVISION;
             token.lexeme = "/";
         }
         break;
-    case '//':
-        // Check for //=
-        ch = fgetc(source);
-        if (ch == '=') {
-            token.type = TOKEN_DIV_ASSIGN;
-            token.lexeme = "//=";
-        } else {
-            ungetc(ch, source); // Put back the character that is not part of this token
-            token.type = TOKEN_DIV;
-            token.lexeme = "//";
-        }
-        break;
     default:
         if (isdigit(ch) || ch == '.'){
             ungetc(ch, source);
-                if (fscanf(source, "%255[0-9.]", buffer) == 1) {
-                    if (strchr(buffer, '.') != NULL) {
-                        token.type = TOKEN_DOUBLE_LITERAL;
-                        token.value.d_val = atof(buffer);
-                    } else {
-                        token.type = TOKEN_INT_LITERAL;
-                        token.value.i_val = atoi(buffer);
-                    }
-                    token.lexeme = strdup(buffer); // Make sure to free this later
+            char *buffer = read_lexeme(source); 
+            if (fscanf(source, "%255[0-9.]", buffer) == 1) {
+                if (strchr(buffer, '.') != NULL) {
+                    token.type = TOKEN_DOUBLE_LITERAL;
+                    token.value.d_val = atof(buffer);
                 } else {
-                    // Error handling for malformed number
-                    token.type = TOKEN_ERROR;
+                    token.type = TOKEN_INT_LITERAL;
+                    token.value.i_val = atoi(buffer);
                 }
-        }else{
-            token.type = TOKEN_ERROR;
+                token.lexeme = strdup(buffer); // Duplicate the buffer to token.lexeme
+                free(buffer); // Make sure to free this later
+            } else {
+                // Error handling for malformed number
+                token.type = TOKEN_ERROR;
+            }
+
+        }else if (isalpha(ch)) {
+            ungetc(ch, source);
+            char *lexeme = read_lexeme(source); // Assume this function reads an identifier/keyword
+
+            // Check if the lexeme is a keyword
+            if (strcmp(lexeme, "print") == 0) {
+                token.type = TOKEN_PRINT;
+            } else if (strcmp(lexeme, "input") == 0) {
+                token.type = TOKEN_INPUT;
+            } else if (strcmp(lexeme, "condition") == 0) {
+                token.type = TOKEN_CONDITION;
+            } else if (strcmp(lexeme, "then") == 0) {
+                token.type = TOKEN_THEN;
+            } else if (strcmp(lexeme, "else") == 0) {
+                token.type = TOKEN_ELSE;
+            } else {
+                token.type = TOKEN_IDENTIFIER; // If it's not a keyword, it's an identifier
+            }
+            token.lexeme = strdup(lexeme); // Make sure to free this later
+            free(lexeme);
+        } else {
+            // Handle single character tokens
+            switch (ch) {
+                case '=':
+                    ch = fgetc(source);
+                    if (ch == '=') {
+                        token.type = TOKEN_EQUAL;
+                        token.lexeme = "==";
+                    }else{
+                        ungetc(ch, source);
+                        token.type = TOKEN_ASSIGN;
+                        token.lexeme = "="; 
+                    }
+                    break;
+                case '>':
+                    token.type = TOKEN_GREATER;
+                    token.lexeme = ">"; 
+                    break;
+                case '<':
+                    token.type = TOKEN_LESS;
+                    token.lexeme = "<"; 
+                    break;
+                case '(':
+                    token.type = TOKEN_OPEN_PAREN;
+                    token.lexeme = "(";
+                    break;
+                case ')':
+                    token.type = TOKEN_CLOSE_PAREN;
+                    token.lexeme = ")";
+                    break;
+                case '{':
+                    token.type = TOKEN_OPEN_BRACE;
+                    token.lexeme = "{";
+                    break;
+                case '}':
+                    token.type = TOKEN_CLOSE_BRACE;
+                    token.lexeme = "}";
+                    break;
+                case '?':
+                    token.type = TOKEN_THEN;
+                    token.lexeme = "?";
+                    break;
+                case ':':
+                    token.type = TOKEN_ELSE;
+                    token.lexeme = ":";
+                    break;
+                default:
+                    token.type = TOKEN_ERROR;
+                    break;
+            }
         }
         break;
     }
-
+    token.line = line;
     return token;
 }
 
+// for printing token info in terminal
+const char* getTokenTypeName(TokenType type) {
+     switch (type) {
+        case TOKEN_INT_DECL: return "TOKEN_INT_DECL";
+        case TOKEN_DOUBLE_DECL: return "TOKEN_DOUBLE_DECL";
+        case TOKEN_INT_LITERAL: return "TOKEN_INT_LITERAL";
+        case TOKEN_DOUBLE_LITERAL: return "TOKEN_DOUBLE_LITERAL";
+        case TOKEN_IDENTIFIER: return "TOKEN_IDENTIFIER";
+        case TOKEN_PLUS: return "TOKEN_PLUS";
+        case TOKEN_MINUS: return "TOKEN_MINUS";
+        case TOKEN_MULTI: return "TOKEN_MULTI";
+        case TOKEN_DIVISION: return "TOKEN_DIVISION";
+        case TOKEN_DIV: return "TOKEN_DIV";
+        case TOKEN_MOD: return "TOKEN_MOD";
+        case TOKEN_ASSIGN: return "TOKEN_ASSIGN";
+        case TOKEN_PLUS_ASSIGN: return "TOKEN_PLUS_ASSIGN";
+        case TOKEN_MINUS_ASSIGN: return "TOKEN_MINUS_ASSIGN";
+        case TOKEN_MULTI_ASSIGN: return "TOKEN_MULTI_ASSIGN";
+        case TOKEN_DIVISION_ASSIGN: return "TOKEN_DIVISION_ASSIGN";
+        case TOKEN_DIV_ASSIGN: return "TOKEN_DIV_ASSIGN";
+        case TOKEN_LESS: return "TOKEN_LESS";
+        case TOKEN_GREATER: return "TOKEN_GREATER";
+        case TOKEN_EQUAL: return "TOKEN_EQUAL";
+        case TOKEN_OPEN_PAREN: return "TOKEN_OPEN_PAREN";
+        case TOKEN_CLOSE_PAREN: return "TOKEN_CLOSE_PAREN";
+        case TOKEN_OPEN_BRACE: return "TOKEN_OPEN_BRACE";
+        case TOKEN_CLOSE_BRACE: return "TOKEN_CLOSE_BRACE";
+        case TOKEN_PRINT: return "TOKEN_PRINT";
+        case TOKEN_INPUT: return "TOKEN_INPUT";
+        case TOKEN_CONDITION: return "TOKEN_CONDITION";
+        case TOKEN_THEN: return "TOKEN_THEN";
+        case TOKEN_ELSE: return "TOKEN_ELSE";
+        case TOKEN_EOF: return "TOKEN_EOF";
+        case TOKEN_ERROR: return "TOKEN_ERROR";
+        default: return "Unknown TokenType";
+    }
+}
+
 int main(){
-    FILE *source = fopen("example.txt", "r");
+    FILE *source = fopen("example/example.txt", "r");
     if(!source){
         perror("Error opening file");
         return EXIT_FAILURE;
     }
-
+ 
     Token token;
-     do {
-        token = get_next_token(source);
+    token.line = 1;
+    do {
+        token = get_next_token(source, token.line);
+        printf("%s %s %i\n", getTokenTypeName(token.type), token.lexeme, token.line);
         // Process the token, e.g., print it or store it for the next phase
     } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);
     
