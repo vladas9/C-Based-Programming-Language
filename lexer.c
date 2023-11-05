@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "include\lexer.h"
 
 #define INITIAL_BUFFER_SIZE 64
@@ -138,21 +139,26 @@ Token get_next_token(FILE *source, int line){
         if (isdigit(ch) || ch == '.'){
             ungetc(ch, source);
             char *buffer = read_lexeme(source); 
-            if (fscanf(source, "%255[0-9.]", buffer) == 1) {
+            int dot_count = 0;
+            for (int i = 0; buffer[i]; i++) {
+                if (buffer[i] == '.') {
+                    dot_count++;
+                }
+            }
+            if (dot_count == 1) { // Valid number with a single period
                 if (strchr(buffer, '.') != NULL) {
                     token.type = TOKEN_DOUBLE_LITERAL;
                     token.value.d_val = atof(buffer);
-                } else {
-                    token.type = TOKEN_INT_LITERAL;
-                    token.value.i_val = atoi(buffer);
                 }
-                token.lexeme = strdup(buffer); // Duplicate the buffer to token.lexeme
-                free(buffer); // Make sure to free this later
-            } else {
-                // Error handling for malformed number
+            } else if (dot_count == 0 && buffer[0] != '.') { // Valid integer literal
+                token.type = TOKEN_INT_LITERAL;
+                token.value.i_val = atoi(buffer);
+            } else { // Invalid number literal
                 token.type = TOKEN_ERROR;
+                // Token.lexeme should contain the invalid number for error reporting
             }
-
+            token.lexeme = strdup(buffer); // Duplicate the buffer to token.lexeme
+            free(buffer); 
         }else if (isalpha(ch)) {
             ungetc(ch, source);
             char *lexeme = read_lexeme(source); // Assume this function reads an identifier/keyword
@@ -169,7 +175,7 @@ Token get_next_token(FILE *source, int line){
             } else {
                 token.type = TOKEN_IDENTIFIER; // If it's not a keyword, it's an identifier
             }
-            token.lexeme = strdup(lexeme); // Make sure to free this later
+            token.lexeme = strdup(lexeme);
             free(lexeme);
         } else {
             // Handle single character tokens
@@ -180,9 +186,10 @@ Token get_next_token(FILE *source, int line){
                         token.type = TOKEN_EQUAL;
                         token.lexeme = "==";
                     }else{
-                        ungetc(ch, source);
+                        ungetc(ch, source); // Put back the character that is not part of this token
                         token.type = TOKEN_ASSIGN;
                         token.lexeme = "="; 
+                        return token; // Return the token here to avoid further processing
                     }
                     break;
                 case '>':
@@ -267,27 +274,26 @@ const char* getTokenTypeName(TokenType type) {
     }
 }
 
-void token_to_json(FILE* file, Token token) {
+void token_to_json(FILE *file, Token token) {
     const char* tokenType = getTokenTypeName(token.type);
     char json[1024]; // Assuming a single token won't exceed 1024 characters
     if(token.type == TOKEN_EOF || token.type == TOKEN_ERROR){
         sprintf(json, "{\"type\":\"%s\", \"lexeme\":\"%s\", \"line\":%d}\n", tokenType, token.lexeme, token.line);
-        fputs(json, file);
-        return;
+    }else{
+        // Generate the JSON string based on the type of the token
+        switch (token.type) {
+            case TOKEN_INT_LITERAL:
+                sprintf(json, "{\"type\":\"%s\", \"value\":%d, \"line\":%d},\n", tokenType, token.value.i_val, token.line);
+                break;
+            case TOKEN_DOUBLE_LITERAL:
+                sprintf(json, "{\"type\":\"%s\", \"value\":%f, \"line\":%d},\n", tokenType, token.value.d_val, token.line);
+                break;
+            default:
+                sprintf(json, "{\"type\":\"%s\", \"lexeme\":\"%s\", \"line\":%d},\n", tokenType, token.lexeme, token.line);
+                break;
+        }
     }
-    // Generate the JSON string based on the type of the token
-    switch (token.type) {
-        case TOKEN_INT_LITERAL:
-            sprintf(json, "{\"type\":\"%s\", \"value\":%d, \"line\":%d},\n", tokenType, token.value.i_val, token.line);
-            break;
-        case TOKEN_DOUBLE_LITERAL:
-            sprintf(json, "{\"type\":\"%s\", \"value\":%f, \"line\":%d},\n", tokenType, token.value.d_val, token.line);
-            break;
-        default:
-            sprintf(json, "{\"type\":\"%s\", \"lexeme\":\"%s\", \"line\":%d},\n", tokenType, token.lexeme, token.line);
-            break;
-    }
-
+   
     // Write the JSON string to the file
     fputs(json, file);
 }
