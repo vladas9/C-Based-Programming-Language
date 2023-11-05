@@ -51,6 +51,7 @@ typedef enum {
     TOKEN_ELSE,          // :
 
     // End of file and error
+    TOKEN_NEW_LINE,
     TOKEN_EOF,            // End-of-file
     TOKEN_ERROR           // Error token
 } TokenType;
@@ -65,5 +66,6 @@ typedef struct {
     int line;       // The line number in the source code where this token was found
 } Token;
 
+Token get_next_token(FILE *source, int line);
 
 #endif

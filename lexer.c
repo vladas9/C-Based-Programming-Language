@@ -48,6 +48,10 @@ Token get_next_token(FILE *source, int line){
         // Check if it a new line
         if(ch == '\n'){ 
             line ++;
+            token.type = TOKEN_NEW_LINE;
+            token.line = line;
+            token.lexeme = "";
+            return token;
         }
     }while(isspace(ch));
     // check if end of file
@@ -55,6 +59,7 @@ Token get_next_token(FILE *source, int line){
         token.type = TOKEN_EOF;
         return token;
     }
+
     switch (ch)
     {
     case '#':
@@ -157,8 +162,6 @@ Token get_next_token(FILE *source, int line){
                 token.type = TOKEN_PRINT;
             } else if (strcmp(lexeme, "input") == 0) {
                 token.type = TOKEN_INPUT;
-            } else if (strcmp(lexeme, "condition") == 0) {
-                token.type = TOKEN_CONDITION;
             } else if (strcmp(lexeme, "then") == 0) {
                 token.type = TOKEN_THEN;
             } else if (strcmp(lexeme, "else") == 0) {
@@ -259,24 +262,55 @@ const char* getTokenTypeName(TokenType type) {
         case TOKEN_ELSE: return "TOKEN_ELSE";
         case TOKEN_EOF: return "TOKEN_EOF";
         case TOKEN_ERROR: return "TOKEN_ERROR";
+        case TOKEN_NEW_LINE: return "TOKEN_NEW_LINE";
         default: return "Unknown TokenType";
     }
 }
 
+void token_to_json(FILE* file, Token token) {
+    const char* tokenType = getTokenTypeName(token.type);
+    char json[1024]; // Assuming a single token won't exceed 1024 characters
+    if(token.type == TOKEN_EOF || token.type == TOKEN_ERROR){
+        sprintf(json, "{\"type\":\"%s\", \"lexeme\":\"%s\", \"line\":%d}\n", tokenType, token.lexeme, token.line);
+        fputs(json, file);
+        return;
+    }
+    // Generate the JSON string based on the type of the token
+    switch (token.type) {
+        case TOKEN_INT_LITERAL:
+            sprintf(json, "{\"type\":\"%s\", \"value\":%d, \"line\":%d},\n", tokenType, token.value.i_val, token.line);
+            break;
+        case TOKEN_DOUBLE_LITERAL:
+            sprintf(json, "{\"type\":\"%s\", \"value\":%f, \"line\":%d},\n", tokenType, token.value.d_val, token.line);
+            break;
+        default:
+            sprintf(json, "{\"type\":\"%s\", \"lexeme\":\"%s\", \"line\":%d},\n", tokenType, token.lexeme, token.line);
+            break;
+    }
+
+    // Write the JSON string to the file
+    fputs(json, file);
+}
+
+
 int main(){
-    FILE *source = fopen("example/example.txt", "r");
+    FILE *source = fopen("example/example.capatichi", "r");
+    FILE *jsonFile = fopen("tokens/tokens.json", "w");
     if(!source){
         perror("Error opening file");
         return EXIT_FAILURE;
     }
- 
     Token token;
     token.line = 1;
+    fputs("[", jsonFile);
     do {
         token = get_next_token(source, token.line);
+        token_to_json(jsonFile, token);
         printf("%s %s %i\n", getTokenTypeName(token.type), token.lexeme, token.line);
         // Process the token, e.g., print it or store it for the next phase
     } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);
-    
+    fputs("]", jsonFile);
+    fclose(jsonFile); // Close the JSON file
+    fclose(source); // Close the source file
     return 0;
 }
