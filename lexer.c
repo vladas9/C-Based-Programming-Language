@@ -188,8 +188,7 @@ Token get_next_token(FILE *source, int line){
                     }else{
                         ungetc(ch, source); // Put back the character that is not part of this token
                         token.type = TOKEN_ASSIGN;
-                        token.lexeme = "="; 
-                        return token; // Return the token here to avoid further processing
+                        token.lexeme = "=";
                     }
                     break;
                 case '>':
@@ -308,7 +307,8 @@ int main(){
     }
     Token token;
     token.line = 1;
-    fputs("[", jsonFile);
+    fputs("{\n", jsonFile);
+    fputs("\"tokens\": [", jsonFile);
     do {
         token = get_next_token(source, token.line);
         token_to_json(jsonFile, token);
@@ -316,6 +316,7 @@ int main(){
         // Process the token, e.g., print it or store it for the next phase
     } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);
     fputs("]", jsonFile);
+    fputs("}", jsonFile);
     fclose(jsonFile); // Close the JSON file
     fclose(source); // Close the source file
     return 0;
