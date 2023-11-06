@@ -8,14 +8,23 @@
 
 struct Node{
     NodeType type;
-    int intValue;    //INTEGER nodes
+    union {
+        int intValue;  
+        double doubleValue;
+    } Value;    //LITERAL nodes
     char* strValue;  //IDENTIFIER nodes
     struct Node* left;
     struct Node* right;
 };
 
 void syntax_error(const char* expected, const Token found) {
-    printf("Syntax error: Expected %s, found '%s' at line %d\n", expected, found.lexeme, found.line);
+    printf("Syntax error: Expected %s, ", expected);
+    if (found.type == TOKEN_INT_LITERAL) {
+        printf("found '%i' at line %d\n", found.value.i_val, found.line);
+    } else if (found.type == TOKEN_DOUBLE_LITERAL) {
+        printf("found '%f' at line %d\n", found.value.d_val, found.line);
+    }
+    else printf("found '%s' at line %d\n", found.lexeme, found.line);
     exit(1);
 }
 TokenType mapJsonToEnum(const char* jsonType){
@@ -53,10 +62,11 @@ TokenType mapJsonToEnum(const char* jsonType){
     if (strcmp(jsonType, "TOKEN_NEW_LINE") == 0) return TOKEN_NEW_LINE;
     return TOKEN_ERROR;
 }
+
 struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex);//ready
 struct Node* parseAssignment(cJSON* tokens, int *currentTokenIndex);//in process...
-struct Node* parseExpression();
-struct Node* parseTerm();
+struct Node* parseExpression(cJSON* tokens, int *currentTokenIndex);
+struct Node* parseTerm(cJSON* tokens, int *currentTokenIndex);
 struct Node* parseFactor();
 struct Node* parseLoop();
 struct Node* parseCondition();
@@ -107,7 +117,82 @@ Token getNextToken(cJSON* tokens,int *currentTokenIndex) {
         return endToken;
     }
 }
+int isOperator(TokenType type) {
+    return (type == TOKEN_PLUS || type == TOKEN_MINUS || type == TOKEN_MULTI || type == TOKEN_DIVISION || type == TOKEN_DIV ||type == TOKEN_MOD);
+}
+//parsing funtions
+struct Node* parseFactor(cJSON* tokens, int *currentTokenIndex) {
+    Token token = getNextToken(tokens, currentTokenIndex);
+    struct Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
 
+    if (token.type==TOKEN_INT_LITERAL){
+        factorNode->type = LITERAL_NODE;
+        factorNode->Value.intValue=token.value.i_val;
+    }else if (token.type == TOKEN_DOUBLE_LITERAL){
+        factorNode->type = LITERAL_NODE;
+        factorNode->Value.doubleValue=token.value.d_val;
+    }else if (token.type == TOKEN_OPEN_PAREN) {
+        factorNode = parseExpression(tokens, currentTokenIndex);
+
+        // Check for the closing parenthesis
+        token = getNextToken(tokens, currentTokenIndex);
+        if (token.type != TOKEN_CLOSE_PAREN) {
+            syntax_error("')'", token);
+        }
+    } else {
+        syntax_error("number or '('", token);
+    }
+    
+    return factorNode;
+}
+
+struct Node* parseTerm(cJSON* tokens, int *currentTokenIndex) {
+    struct Node* left = parseFactor(tokens, currentTokenIndex);
+
+    while (isOperator(getCurrentToken(tokens, currentTokenIndex).type)) {
+        Token operatorToken = getNextToken(tokens, currentTokenIndex);
+        struct Node* right = parseFactor(tokens, currentTokenIndex);
+        
+        struct Node* operatorNode = (struct Node*)malloc(sizeof(struct Node));
+        //operatorNode->type = operatorToken.type;
+        switch (operatorToken.type){
+        case TOKEN_PLUS:operatorNode->type=PLUS_NODE; break;
+        case TOKEN_MINUS:operatorNode->type=MINUS_NODE; break;
+        case TOKEN_DIVISION:operatorNode->type=DIV_NODE; break;
+        case TOKEN_MULTI:operatorNode->type=MULTIPLY_NODE; break;
+        default:
+            break;
+        }
+        operatorNode->left = left;
+        operatorNode->right = right;
+        left = operatorNode;
+    }
+
+    return left;
+}
+struct Node* parseExpression(cJSON* tokens, int *currentTokenIndex) {
+    struct Node* left = parseTerm(tokens, currentTokenIndex);
+
+    while (isOperator(getCurrentToken(tokens, currentTokenIndex).type)) {
+        Token operatorToken = getNextToken(tokens, currentTokenIndex);
+        struct Node* right = parseTerm(tokens, currentTokenIndex);
+        struct Node* operatorNode = (struct Node*)malloc(sizeof(struct Node));
+        //operatorNode->type = operatorToken.type;
+        switch (operatorToken.type){
+        case TOKEN_PLUS:operatorNode->type=PLUS_NODE; break;
+        case TOKEN_MINUS:operatorNode->type=MINUS_NODE; break;
+        case TOKEN_DIV:operatorNode->type=DIV_NODE; break;
+        case TOKEN_MULTI:operatorNode->type=MULTIPLY_NODE; break;
+        default:
+            break;
+        }
+        operatorNode->left = left;
+        operatorNode->right = right;
+        left = operatorNode;
+    }
+
+    return left;
+}
 struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
     struct Node* declarationNode = (struct Node*)malloc(sizeof(struct Node));
     declarationNode->type = DEC_NODE;
@@ -129,9 +214,11 @@ struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
     // Expect an assignment or end of line declaration
     token = getNextToken(tokens, currentTokenIndex);
     switch (token.type){
-    case TOKEN_ASSIGN://parseAssignment(tokens, currentTokenIndex);break; uncomment only after impementing
+    case TOKEN_ASSIGN:
+        *currentTokenIndex=*currentTokenIndex-2;
+        parseAssignment(tokens, currentTokenIndex);break; //need to add something to connect declaration identifier with assignment identifier
     case TOKEN_NEW_LINE:break;
-    default:syntax_error("'new line'", token);break;
+    default:syntax_error("new line", token);break;
     }
     return declarationNode;
 }
@@ -146,16 +233,15 @@ struct Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
         syntax_error("identifier", token);
     }
 
-    token = getNextToken();
+    token = getNextToken(tokens, currentTokenIndex);
     if (token.type != TOKEN_ASSIGN) {
         syntax_error("'='", token);
     }
 
     // Parse the right-hand side (expression or value)
-    assignmentNode->left = parseExpression(); // You'll need to implement parseExpression()
-
+    assignmentNode->left = parseExpression(tokens, currentTokenIndex); // need to implement parseExpression()
     // Expect nline
-    token = getNextToken();
+    token = getNextToken(tokens, currentTokenIndex);
     if (token.type != TOKEN_NEW_LINE) {
         syntax_error("new line", token);
     }
