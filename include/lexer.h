@@ -66,6 +66,6 @@ typedef struct {
     int line;       // The line number in the source code where this token was found
 } Token;
 
-Token get_next_token(FILE *source, int line);
+int lexer();
 
 #endif
