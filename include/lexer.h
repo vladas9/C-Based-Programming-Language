@@ -3,7 +3,7 @@
 
 // All token typ
 typedef enum {
-    // Data type declarations
+    // Data type
     TOKEN_INT_DECL,       // #i
     TOKEN_DOUBLE_DECL,    // #d
 
@@ -11,7 +11,7 @@ typedef enum {
     TOKEN_INT_LITERAL,    // 123, 0, 456, etc.
     TOKEN_DOUBLE_LITERAL, // 123.456, 0.0, 0.789, etc.
 
-    // Identifiers (variable names)
+    // Identifiers
     TOKEN_IDENTIFIER,     // x, name, var123, _myVar, etc.
 
     // Arithmetic operators

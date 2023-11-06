@@ -1,5 +1,5 @@
 #i num1
-#d num2
+#d num2+
 #i num3
 num1=0
 num3=3+6
