@@ -18,6 +18,7 @@ typedef enum{
     PRINT_NODE,
     LITERAL_NODE,
 }NodeType;
+
 typedef struct Node{
     NodeType type;
     union {
