@@ -3,7 +3,7 @@
 
 // All token typ
 typedef enum {
-    // Data type
+    // Data type declarations
     TOKEN_INT_DECL,       // #i
     TOKEN_DOUBLE_DECL,    // #d
 
@@ -11,7 +11,7 @@ typedef enum {
     TOKEN_INT_LITERAL,    // 123, 0, 456, etc.
     TOKEN_DOUBLE_LITERAL, // 123.456, 0.0, 0.789, etc.
 
-    // Identifiers
+    // Identifiers (variable names)
     TOKEN_IDENTIFIER,     // x, name, var123, _myVar, etc.
 
     // Arithmetic operators
@@ -63,9 +63,9 @@ typedef struct {
         int i_val;    // The value if it's an integer literal
         double d_val; // The value if it's a double literal
     } value;
+    char *error_message;
     int line;       // The line number in the source code where this token was found
 } Token;
 
-Token get_next_token(FILE *source, int line);
 
 #endif
