@@ -4,6 +4,7 @@
 typedef enum{
     DEC_NODE,//declaration
     ASS_NODE,//assignment
+    VAR_NODE,
     EXPR_NODE,
     TERM_NODE,
     FACTOR_NODE,
@@ -17,6 +18,15 @@ typedef enum{
     PRINT_NODE,
     LITERAL_NODE,
 }NodeType;
-
+typedef struct Node{
+    NodeType type;
+    union {
+        int intValue;  
+        double doubleValue;
+    } Value;    //LITERAL nodes
+    char* strValue;  //IDENTIFIER nodes
+    struct Node* left;
+    struct Node* right;
+}Node;
 
 #endif
