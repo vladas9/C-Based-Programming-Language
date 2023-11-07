@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "include\lexer.h"
 
 #define INITIAL_BUFFER_SIZE 64
@@ -73,6 +74,7 @@ Token get_next_token(FILE *source, int line){
                 token.type = TOKEN_DOUBLE_DECL;
                 token.lexeme = "#d";
             } else {
+                token.lexeme ="#";
                 token.type = TOKEN_ERROR; //return an error if it's not a declaration
             }
             break;
@@ -183,25 +185,34 @@ Token get_next_token(FILE *source, int line){
                 ungetc(ch, source);
                 char *buffer = read_lexeme(source); 
                 int dot_count = 0;
+                bool has_invalid_chars = false;
+
+                // Count periods to determine if the lexeme is a valid float
                 for (int i = 0; buffer[i]; i++) {
                     if (buffer[i] == '.') {
                         dot_count++;
                     }
-                }
-                if (dot_count == 1) { // Valid number with a single period
-                    if (strchr(buffer, '.') != NULL) {
-                        token.type = TOKEN_DOUBLE_LITERAL;
-                        token.value.d_val = atof(buffer);
+                    // Check for any non-digit and non-period characters
+                    if (!isdigit(buffer[i]) && buffer[i] != '.') {
+                        has_invalid_chars = true;
+                        break; // No need to continue if an invalid character is found
                     }
-                } else if (dot_count == 0 && buffer[0] != '.') { // Valid integer literal
+                }
+
+                // Handle the lexeme based on the checks performed
+                if (!has_invalid_chars && dot_count == 1) { // Valid floating-point number
+                    token.type = TOKEN_DOUBLE_LITERAL;
+                    token.value.d_val = atof(buffer);
+                } else if (!has_invalid_chars && dot_count == 0) { // Valid integer
                     token.type = TOKEN_INT_LITERAL;
                     token.value.i_val = atoi(buffer);
                 } else { // Invalid number literal
                     token.type = TOKEN_ERROR;
                     // Token.lexeme should contain the invalid number for error reporting
                 }
+
                 token.lexeme = strdup(buffer); // Duplicate the buffer to token.lexeme
-                free(buffer); 
+                free(buffer);
             }else if (isalpha(ch)) {
                 ungetc(ch, source);
                 char *lexeme = read_lexeme(source); // Assume this function reads an identifier/keyword
@@ -310,7 +321,7 @@ int lexer(){
     do {
         token = get_next_token(source, token.line);
         token_to_json(jsonFile, token);
-        printf("%s %s %i\n", getTokenTypeName(token.type), token.lexeme, token.line);
+        // printf("%s %s %i\n", getTokenTypeName(token.type), token.lexeme, token.line);
         // Process the token, e.g., print it or store it for the next phase
     } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);
     fputs("]}", jsonFile);
