@@ -6,17 +6,6 @@
 #include "include/lexer.h"
 #include "include/parser.h"
 
-struct Node{
-    NodeType type;
-    union {
-        int intValue;  
-        double doubleValue;
-    } Value;    //LITERAL nodes
-    char* strValue;  //IDENTIFIER nodes
-    struct Node* left;
-    struct Node* right;
-};
-
 void syntax_error(const char* expected, const Token found) {
     printf("Syntax error: Expected %s, ", expected);
     if (found.type == TOKEN_INT_LITERAL) {
@@ -63,14 +52,16 @@ TokenType mapJsonToEnum(const char* jsonType){
     return TOKEN_ERROR;
 }
 
-struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex);//ready
-struct Node* parseAssignment(cJSON* tokens, int *currentTokenIndex);//in process...
-struct Node* parseExpression(cJSON* tokens, int *currentTokenIndex);
-struct Node* parseTerm(cJSON* tokens, int *currentTokenIndex);
-struct Node* parseFactor();
-struct Node* parseLoop();
-struct Node* parseCondition();
-struct Node* parsePrint();
+Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex);//ready
+Node* parseAssignment(cJSON* tokens, int *currentTokenIndex);//in process...
+Node* parseExpression(cJSON* tokens, int *currentTokenIndex);
+Node* parseTerm(cJSON* tokens, int *currentTokenIndex);
+Node* parseFactor();
+Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex);
+Node* parseBinaryOperator(int precedence, cJSON* tokens, int *currentTokenIndex);
+Node* parseLoop();
+Node* parseCondition();
+Node* parsePrint();
 Token getCurrentToken(cJSON* tokens, int *currentTokenIndex){
     cJSON* token = cJSON_GetArrayItem(tokens, *currentTokenIndex);
     Token currentToken;
@@ -121,41 +112,70 @@ int isOperator(TokenType type) {
     return (type == TOKEN_PLUS || type == TOKEN_MINUS || type == TOKEN_MULTI || type == TOKEN_DIVISION || type == TOKEN_DIV ||type == TOKEN_MOD);
 }
 //parsing funtions
-struct Node* parseFactor(cJSON* tokens, int *currentTokenIndex) {
-    Token token = getNextToken(tokens, currentTokenIndex);
-    struct Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
 
-    if (token.type==TOKEN_INT_LITERAL){
-        factorNode->type = LITERAL_NODE;
-        factorNode->Value.intValue=token.value.i_val;
-    }else if (token.type == TOKEN_DOUBLE_LITERAL){
-        factorNode->type = LITERAL_NODE;
-        factorNode->Value.doubleValue=token.value.d_val;
-    }else if (token.type == TOKEN_OPEN_PAREN) {
-        factorNode = parseExpression(tokens, currentTokenIndex);
+int getOperatorPrecedence(TokenType type) {
+    switch (type) {
+        case TOKEN_PLUS:
+        case TOKEN_MINUS:
+            return 1;
+        case TOKEN_MULTI:
+        case TOKEN_DIVISION:
+            return 2;
+        // Add more cases for other operators with appropriate precedence
+        default:
+            return 0; // Default precedence for non-operators
+    }
+}
+Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex) {
+    Token token = getCurrentToken(tokens, currentTokenIndex);
+    if (token.type == TOKEN_OPEN_PAREN) {
+        // Consume the left parenthesis
+        getNextToken(tokens, currentTokenIndex);
+        struct Node* subExpression = parseExpression(tokens, currentTokenIndex);
 
         // Check for the closing parenthesis
         token = getNextToken(tokens, currentTokenIndex);
         if (token.type != TOKEN_CLOSE_PAREN) {
             syntax_error("')'", token);
         }
-    } else {
-        syntax_error("number or '('", token);
+
+        return subExpression;
+    }else if(token.type==TOKEN_INT_LITERAL){
+        Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
+        factorNode->type = LITERAL_NODE;
+        factorNode->Value.intValue=token.value.i_val;
+        getNextToken(tokens, currentTokenIndex);
+        return factorNode;
+    }else if (token.type == TOKEN_DOUBLE_LITERAL){
+        Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
+        factorNode->type = LITERAL_NODE;
+        factorNode->Value.doubleValue=token.value.d_val;
+        getNextToken(tokens, currentTokenIndex);
+        return factorNode;
+    }else if (token.type==TOKEN_IDENTIFIER){
+        Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
+        factorNode->type = VAR_NODE;
+        factorNode->strValue = strdup(token.lexeme);
+        getNextToken(tokens, currentTokenIndex);
+        return factorNode;
     }
-    
-    return factorNode;
 }
+Node* parseBinaryOperator(int minPrecedence, cJSON* tokens, int *currentTokenIndex) {
+    struct Node* left = parsePrimaryExpression(tokens, currentTokenIndex);
+    while (getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_NEW_LINE && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_CLOSE_PAREN) {
+        Token token = getCurrentToken(tokens, currentTokenIndex);
+        int precedence = getOperatorPrecedence(token.type);
 
-struct Node* parseTerm(cJSON* tokens, int *currentTokenIndex) {
-    struct Node* left = parseFactor(tokens, currentTokenIndex);
+        if (precedence < minPrecedence) {
+            return left; // No operator with higher precedence
+        }
 
-    while (isOperator(getCurrentToken(tokens, currentTokenIndex).type)) {
-        Token operatorToken = getNextToken(tokens, currentTokenIndex);
-        struct Node* right = parseFactor(tokens, currentTokenIndex);
-        
+        getNextToken(tokens, currentTokenIndex); // Consume the operator
+        struct Node* right = parseBinaryOperator(precedence + 1, tokens, currentTokenIndex);
+
+        // Create an operator node with left and right operands
         struct Node* operatorNode = (struct Node*)malloc(sizeof(struct Node));
-        //operatorNode->type = operatorToken.type;
-        switch (operatorToken.type){
+        switch (token.type){
         case TOKEN_PLUS:operatorNode->type=PLUS_NODE; break;
         case TOKEN_MINUS:operatorNode->type=MINUS_NODE; break;
         case TOKEN_DIVISION:operatorNode->type=DIV_NODE; break;
@@ -165,36 +185,18 @@ struct Node* parseTerm(cJSON* tokens, int *currentTokenIndex) {
         }
         operatorNode->left = left;
         operatorNode->right = right;
+
         left = operatorNode;
     }
 
     return left;
 }
-struct Node* parseExpression(cJSON* tokens, int *currentTokenIndex) {
-    struct Node* left = parseTerm(tokens, currentTokenIndex);
-
-    while (isOperator(getCurrentToken(tokens, currentTokenIndex).type)) {
-        Token operatorToken = getNextToken(tokens, currentTokenIndex);
-        struct Node* right = parseTerm(tokens, currentTokenIndex);
-        struct Node* operatorNode = (struct Node*)malloc(sizeof(struct Node));
-        //operatorNode->type = operatorToken.type;
-        switch (operatorToken.type){
-        case TOKEN_PLUS:operatorNode->type=PLUS_NODE; break;
-        case TOKEN_MINUS:operatorNode->type=MINUS_NODE; break;
-        case TOKEN_DIV:operatorNode->type=DIV_NODE; break;
-        case TOKEN_MULTI:operatorNode->type=MULTIPLY_NODE; break;
-        default:
-            break;
-        }
-        operatorNode->left = left;
-        operatorNode->right = right;
-        left = operatorNode;
-    }
-
-    return left;
+Node* parseExpression(cJSON* tokens, int *currentTokenIndex) {
+    return parseBinaryOperator(0, tokens, currentTokenIndex); // Start with lowest precedence
 }
-struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
-    struct Node* declarationNode = (struct Node*)malloc(sizeof(struct Node));
+
+Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
+     Node* declarationNode = ( Node*)malloc(sizeof( Node));
     declarationNode->type = DEC_NODE;
 
     Token token = getNextToken(tokens, currentTokenIndex);
@@ -205,7 +207,7 @@ struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
     }
     token = getNextToken(tokens, currentTokenIndex);
     if (token.type == TOKEN_IDENTIFIER) {
-        declarationNode->left = (struct Node*)malloc(sizeof(struct Node));
+        declarationNode->left = ( Node*)malloc(sizeof( Node));
         declarationNode->left->type = TOKEN_IDENTIFIER;
         declarationNode->left->strValue = strdup(token.lexeme);
     } else {
@@ -222,9 +224,9 @@ struct Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
     }
     return declarationNode;
 }
-struct Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
+Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
     Token token = getNextToken(tokens, currentTokenIndex);
-    struct Node* assignmentNode = (struct Node*)malloc(sizeof(struct Node));
+     Node* assignmentNode = ( Node*)malloc(sizeof( Node));
     assignmentNode->type = ASS_NODE;
 
     if (token.type == TOKEN_IDENTIFIER) {
@@ -239,7 +241,7 @@ struct Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
     }
 
     // Parse the right-hand side (expression or value)
-    assignmentNode->left = parseExpression(tokens, currentTokenIndex); // need to implement parseExpression()
+    assignmentNode->left = parseExpression(tokens, currentTokenIndex); 
     // Expect nline
     token = getNextToken(tokens, currentTokenIndex);
     if (token.type != TOKEN_NEW_LINE) {
@@ -283,6 +285,7 @@ int main() {
             case TOKEN_DOUBLE_DECL:
                 parseDeclaration(tokens, &currentTokenIndex);
                 break;
+        
             case TOKEN_ERROR:
                 printf("Invalid syntax: line %i", getCurrentToken(tokens, &currentTokenIndex).line);
                 break;
@@ -290,12 +293,8 @@ int main() {
             printf("uknown sequence of tokens");
             exit(1);
         }
-        
-        
     }
-    
     cJSON_Delete(root);
     free(jsonBuffer);
-    //printf("hello");
     return 0;
 }
