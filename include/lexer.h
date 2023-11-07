@@ -63,9 +63,10 @@ typedef struct {
         int i_val;    // The value if it's an integer literal
         double d_val; // The value if it's a double literal
     } value;
+    char *error_message;
     int line;       // The line number in the source code where this token was found
 } Token;
 
-int lexer();
+Token lexer();
 
 #endif

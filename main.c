@@ -4,5 +4,8 @@
 
 
 int main(){
-    lexer();
+    Token token = lexer();
+    if(token.type == TOKEN_ERROR){
+        printf("LEXER ERROR: %s %s on line %i", token.lexeme,token.error_message,token.line);
+    }
 }

@@ -61,7 +61,6 @@ Token get_next_token(FILE *source, int line){
         token.type = TOKEN_EOF;
         return token;
     }
-
     switch (ch)
     {
         case '#':
@@ -73,8 +72,15 @@ Token get_next_token(FILE *source, int line){
             } else if (ch == 'd') {
                 token.type = TOKEN_DOUBLE_DECL;
                 token.lexeme = "#d";
-            } else {
+            } else if(isalpha(ch))
+            {   
+                token.lexeme = (char*)malloc(2);
+                sprintf(token.lexeme, "#%c",ch);
+                token.error_message = "Unknown data type";
+                token.type = TOKEN_ERROR;
+            }else{
                 token.lexeme ="#";
+                token.error_message = "Expected a declaration";
                 token.type = TOKEN_ERROR; //return an error if it's not a declaration
             }
             break;
@@ -206,9 +212,14 @@ Token get_next_token(FILE *source, int line){
                 } else if (!has_invalid_chars && dot_count == 0) { // Valid integer
                     token.type = TOKEN_INT_LITERAL;
                     token.value.i_val = atoi(buffer);
-                } else { // Invalid number literal
+                } else if(has_invalid_chars){
+                    token.lexeme = strdup(buffer);
+                    token.error_message = "Incorrect identifier declaration";
                     token.type = TOKEN_ERROR;
-                    // Token.lexeme should contain the invalid number for error reporting
+                }else{ // Invalid number literal
+                    token.lexeme = strdup(buffer);
+                    token.error_message = "Incorrect number declaration";
+                    token.type = TOKEN_ERROR;
                 }
 
                 token.lexeme = strdup(buffer); // Duplicate the buffer to token.lexeme
@@ -228,6 +239,9 @@ Token get_next_token(FILE *source, int line){
                 token.lexeme = strdup(lexeme);
                 free(lexeme);
             } else {
+                token.lexeme = (char*)malloc(2);
+                sprintf(token.lexeme, "%c",ch);
+                token.error_message = "Unknown command";
                 token.type = TOKEN_ERROR;
             }
             break;
@@ -300,7 +314,7 @@ void token_to_json(FILE *file, Token token) {
 }
 
 
-int lexer(){
+Token lexer(){
     char name[100];
     printf("Enter file path: ");
     fgets(name, 99,stdin);
@@ -310,11 +324,11 @@ int lexer(){
     }
     FILE *source = fopen(name, "r");
     FILE *jsonFile = fopen("tokens/tokens.json", "w");
+    Token token;
     if(!source){
         perror("Error opening file");
-        return EXIT_FAILURE;
+        return token;
     }
-    Token token;
     token.line = 1;
     fputs("{\n", jsonFile);
     fputs("\"tokens\": [", jsonFile);
@@ -324,8 +338,11 @@ int lexer(){
         // printf("%s %s %i\n", getTokenTypeName(token.type), token.lexeme, token.line);
         // Process the token, e.g., print it or store it for the next phase
     } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);
+ 
     fputs("]}", jsonFile);
     fclose(jsonFile); // Close the JSON file
     fclose(source); // Close the source file
-    return 0;
+    if(token.type == TOKEN_ERROR){
+        return token;
+    }
 }

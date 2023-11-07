@@ -1,4 +1,4 @@
-#i num1
+#i num1 = 9 + 8/9
 #d num2 = .56
 #i num3
 num2 =7
