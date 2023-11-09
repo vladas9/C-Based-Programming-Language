@@ -111,7 +111,7 @@ Token getNextToken(cJSON* tokens,int *currentTokenIndex) {
 int isOperator(TokenType type) {
     return (type == TOKEN_PLUS || type == TOKEN_MINUS || type == TOKEN_MULTI || type == TOKEN_DIVISION || type == TOKEN_DIV ||type == TOKEN_MOD);
 }
-//parsing funtions
+//parsing expressions
 
 int getOperatorPrecedence(TokenType type) {
     switch (type) {
@@ -142,13 +142,13 @@ Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex) {
         return subExpression;
     }else if(token.type==TOKEN_INT_LITERAL){
         Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
-        factorNode->type = LITERAL_NODE;
+        factorNode->type = LITERAL_INT_NODE;
         factorNode->Value.intValue=token.value.i_val;
         getNextToken(tokens, currentTokenIndex);
         return factorNode;
     }else if (token.type == TOKEN_DOUBLE_LITERAL){
         Node* factorNode = (struct Node*)malloc(sizeof(struct Node));
-        factorNode->type = LITERAL_NODE;
+        factorNode->type = LITERAL_DOUBLE_NODE;
         factorNode->Value.doubleValue=token.value.d_val;
         getNextToken(tokens, currentTokenIndex);
         return factorNode;
@@ -196,10 +196,11 @@ Node* parseExpression(cJSON* tokens, int *currentTokenIndex) {
 }
 
 Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
-     Node* declarationNode = ( Node*)malloc(sizeof( Node));
-    declarationNode->type = DEC_NODE;
-
+    Node* declarationNode = ( Node*)malloc(sizeof( Node));
     Token token = getNextToken(tokens, currentTokenIndex);
+    if (token.type == TOKEN_INT_DECL) declarationNode->type = DEC_INT_NODE;
+    if (token.type == TOKEN_DOUBLE_DECL) declarationNode->type = DEC_DOUBLE_NODE;
+    
     if (token.type == TOKEN_INT_DECL || token.type == TOKEN_DOUBLE_DECL) {
         declarationNode->strValue = strdup(token.lexeme);
     } else {
@@ -226,7 +227,7 @@ Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
 }
 Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
     Token token = getNextToken(tokens, currentTokenIndex);
-     Node* assignmentNode = ( Node*)malloc(sizeof( Node));
+    Node* assignmentNode = ( Node*)malloc(sizeof( Node));
     assignmentNode->type = ASS_NODE;
 
     if (token.type == TOKEN_IDENTIFIER) {
@@ -250,8 +251,63 @@ Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
 
     return assignmentNode;
 }
+//parse ?{}:{} and {}
+Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
+    Token token=getNextToken(tokens,currentTokenIndex);
+    if(token.type!=TOKEN_OPEN_BRACE) syntax_error("'{'",token);
+    token=getNextToken(tokens,currentTokenIndex);
+    //need to implement an unique function for or modify drastically current loop
+    while (token.type!=TOKEN_CLOSE_BRACE){
+        switch(getCurrentToken(tokens, &currentTokenIndex).type){
+            case TOKEN_INT_DECL: 
+            case TOKEN_DOUBLE_DECL:
+                parseDeclaration(tokens, &currentTokenIndex);
+                break;
+            case TOKEN_ERROR:
+                printf("Invalid syntax: line %i", getCurrentToken(tokens, &currentTokenIndex).line);
+                break;
+            case TOKEN_IDENTIFIER:
+                Token token=getCurrentToken(tokens, &currentTokenIndex+1);//get next token with no modifying of Index
+                if(token.type==TOKEN_ASSIGN)parseAssignment(tokens, &currentTokenIndex);
+                //if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)parseIfElseStatement(tokens, &currentTokenIndex);
+                else syntax_error("<,>,==,=", token);
+            default:
+            printf("uknown sequence of tokens");
+            exit(1);
+        }
+    }
 
+}
+Node* parseRelationalExpression(cJSON* tokens, int *currentTokenIndex){
+    Node* leftOperand = parsePrimaryExpression(tokens, currentTokenIndex);
+    Token operatorToken = getNextToken(tokens, currentTokenIndex);
+    Node* rightOperand = parsePrimaryExpression(tokens, currentTokenIndex);
 
+    //relational expression node
+    struct Node* relationalNode = (struct Node*)malloc(sizeof(struct Node));
+    relationalNode->type = operatorToken.type;
+    relationalNode->left = leftOperand;
+    relationalNode->right = rightOperand;
+
+    return relationalNode;
+}
+
+Node* parseIfElseStatements(cJSON* tokens, int *currentTokenIndex){
+    struct Node* ifElseNode = (struct Node*)malloc(sizeof(struct Node));
+    ifElseNode->type = IF_NODE;
+    // Parse the relational expression (x1 < x2)
+    ifElseNode->extra = parseRelationalExpression(tokens,currentTokenIndex);//need a new property
+    Token token = getNextToken(tokens,currentTokenIndex);                                        
+    if (token.type != TOKEN_THEN)syntax_error("'?'", token);
+    //true block
+    ifElseNode->right = parseBlock(tokens,currentTokenIndex);
+    token = getNextToken(tokens,currentTokenIndex);
+    if (token.type != TOKEN_ELSE)syntax_error("':'", token);
+    //false block
+    ifElseNode->left = parseBlock(tokens,currentTokenIndex);
+
+    return ifElseNode;
+}
 int main() {
     cJSON* root;
     cJSON* tokens;
@@ -285,10 +341,11 @@ int main() {
             case TOKEN_DOUBLE_DECL:
                 parseDeclaration(tokens, &currentTokenIndex);
                 break;
-        
-            case TOKEN_ERROR:
-                printf("Invalid syntax: line %i", getCurrentToken(tokens, &currentTokenIndex).line);
-                break;
+            case TOKEN_IDENTIFIER:
+                Token token=getCurrentToken(tokens, &currentTokenIndex+1);//get next token with no modifying of Index
+                if(token.type==TOKEN_ASSIGN)parseAssignment(tokens, &currentTokenIndex);
+                if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)parseIfElseStatement(tokens, &currentTokenIndex);
+                else syntax_error("<,>,==,=", token);
             default:
             printf("uknown sequence of tokens");
             exit(1);
