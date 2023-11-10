@@ -2,7 +2,8 @@
 #define PARSER_H
 
 typedef enum{
-    DEC_NODE,//declaration
+    DEC_INT_NODE,//declaration
+    DEC_DOUBLE_NODE,
     ASS_NODE,//assignment
     VAR_NODE,
     EXPR_NODE,
@@ -16,11 +17,12 @@ typedef enum{
     LOOP_NODE,
     COND_NODE,
     PRINT_NODE,
-    LITERAL_NODE,
+    LITERAL_INT_NODE,
+    LITERAL_DOUBLE_NODE
 }NodeType;
 
 typedef struct Node{
-    NodeType type;
+    NodeType type; 
     union {
         int intValue;  
         double doubleValue;
