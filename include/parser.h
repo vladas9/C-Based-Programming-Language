@@ -2,10 +2,10 @@
 #define PARSER_H
 
 typedef enum{
-    DEC_INT_NODE,//declaration
+    DEC_INT_NODE,       //declaration
     DEC_DOUBLE_NODE,
-    ASS_NODE,//assignment
-    VAR_NODE,
+    ASS_NODE,           //assignment
+    VAR_NODE,           
     EXPR_NODE,
     TERM_NODE,
     FACTOR_NODE,
@@ -13,9 +13,16 @@ typedef enum{
     MINUS_NODE,
     DIV_NODE,
     MULTIPLY_NODE,
-    MOD_NODE,
-    WHILE_NODE,
-    IF_NODE,
+    MOD_NODE,          
+    GREATER_NODE,       //node for >
+    EQUAL_NODE,         //node for ==
+    LESS_NODE,         //node for <
+    WHILE_NODE,         //while
+    IF_NODE,            //if
+    THEN_ELSE_NODE,     //then-else
+    THEN_NODE,
+    ELSE_NODE,
+    BLOCK_NODE,         //Block
     PRINT_NODE,
     LITERAL_INT_NODE,
     LITERAL_DOUBLE_NODE,
@@ -29,8 +36,12 @@ struct Node{
         double doubleValue;
     } Value;    //LITERAL nodes
     char* strValue;  //IDENTIFIER nodes
-    struct Node* left;
-    struct Node* right;
+    Node* left;
+    Node* right;
+};
+typedef struct RootToken RootToken;
+struct RootToken{
+    Node* token_arr;
 };
 
 #endif

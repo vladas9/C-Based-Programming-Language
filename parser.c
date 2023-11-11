@@ -60,9 +60,9 @@ Node* parseFactor();
 Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex);
 Node* parseBinaryOperator(int precedence, cJSON* tokens, int *currentTokenIndex);
 Node* parseLoop();
-Node* parseCondition();
+Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex);
 Node* parsePrint();
-Token getCurrentToken(cJSON* tokens, int *currentTokenIndex){
+Token getCurrentToken(cJSON* tokens, int* currentTokenIndex){
     cJSON* token = cJSON_GetArrayItem(tokens, *currentTokenIndex);
     Token currentToken;
     const char* jsonType = cJSON_GetObjectItem(token, "type")->valuestring;
@@ -253,60 +253,127 @@ Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
 }
 //parse ?{}:{} and {}
 Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
-    Token token=getNextToken(tokens,currentTokenIndex);
-    if(token.type!=TOKEN_OPEN_BRACE) syntax_error("'{'",token);
-    token=getNextToken(tokens,currentTokenIndex);
-    //need to implement an unique function for or modify drastically current loop
-    while (token.type!=TOKEN_CLOSE_BRACE){
-        switch(getCurrentToken(tokens, &currentTokenIndex).type){
+    Token token = getNextToken(tokens, currentTokenIndex); // Expect an opening curly brace
+    if (token.type != TOKEN_OPEN_BRACE)syntax_error("'{'", token);
+
+    Node* blockNode = (struct Node*)malloc(sizeof(struct Node));
+    blockNode->type = BLOCK_NODE;
+    blockNode->left = NULL;
+    blockNode->right = NULL;
+
+    Node* currentStatement = NULL;
+    Node* statementNode = NULL;
+    while (1) {
+        token = getCurrentToken(tokens, currentTokenIndex);
+        if (token.type == TOKEN_CLOSE_BRACE) {
+            getNextToken(tokens, currentTokenIndex); // Consume the closing brace
+            break;
+        }
+
+        // Parse the current statement
+       
+        switch(token.type){
+            case TOKEN_NEW_LINE:
+                token = getNextToken(tokens, currentTokenIndex);
+                
+                break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
-                parseDeclaration(tokens, &currentTokenIndex);
-                break;
-            case TOKEN_ERROR:
-                printf("Invalid syntax: line %i", getCurrentToken(tokens, &currentTokenIndex).line);
+                statementNode=parseDeclaration(tokens, currentTokenIndex);
                 break;
             case TOKEN_IDENTIFIER:
-                Token token=getCurrentToken(tokens, &currentTokenIndex+1);//get next token with no modifying of Index
-                if(token.type==TOKEN_ASSIGN)parseAssignment(tokens, &currentTokenIndex);
-                //if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)parseIfElseStatement(tokens, &currentTokenIndex);
+                (*currentTokenIndex)+=1;
+                token=getNextToken(tokens, currentTokenIndex);//get next token with no modifying of Index
+                (*currentTokenIndex)-=2;
+                if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, currentTokenIndex);
+                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, currentTokenIndex);//need to parse a node to determine if it's condition or loop
                 else syntax_error("<,>,==,=", token);
+                break;
             default:
-            printf("uknown sequence of tokens");
+            printf("uknown sequence of tokens at line %d ", token.line);
             exit(1);
         }
+        // Link the statements in the block
+        if (currentStatement == NULL) {
+            blockNode->left = statementNode;
+            currentStatement = statementNode;
+        } else {
+            currentStatement->right = statementNode;
+            currentStatement = statementNode;
+        }
+        //token = getNextToken(tokens, currentTokenIndex);
+        //if (token.type != TOKEN_NEW_LINE) {
+           // syntax_error("'new line'", token);
+       // }
+        
     }
-
+    return blockNode;
 }
 Node* parseRelationalExpression(cJSON* tokens, int *currentTokenIndex){
+    Node* relationalNode = (struct Node*)malloc(sizeof(struct Node));
     Node* leftOperand = parsePrimaryExpression(tokens, currentTokenIndex);
     Token operatorToken = getNextToken(tokens, currentTokenIndex);
     Node* rightOperand = parsePrimaryExpression(tokens, currentTokenIndex);
 
     //relational expression node
-    struct Node* relationalNode = (struct Node*)malloc(sizeof(struct Node));
-    relationalNode->type = operatorToken.type;
+    switch(operatorToken.type){
+        case TOKEN_LESS:
+            relationalNode->type = LESS_NODE;
+            break;
+        case TOKEN_GREATER:
+            relationalNode->type = GREATER_NODE;
+            break;
+        case TOKEN_EQUAL:
+            relationalNode->type = EQUAL_NODE;
+            break;
+        default:
+            printf("unknown operand, line %d", operatorToken.line);
+    }
     relationalNode->left = leftOperand;
     relationalNode->right = rightOperand;
 
     return relationalNode;
 }
+Node* parseThenElseNode(cJSON* tokens, int *currentTokenIndex){
+    Node* thenElseNode= (Node*)malloc(sizeof(Node));
+    thenElseNode->type=THEN_ELSE_NODE;
+    Token token = getNextToken(tokens,currentTokenIndex);
+    if(token.type!=TOKEN_THEN)syntax_error("'?'", token);
+    thenElseNode->left = parseBlock(tokens,currentTokenIndex);
+    thenElseNode->left->type=THEN_NODE;
+     token=getNextToken(tokens,currentTokenIndex);
+    if(token.type!=TOKEN_ELSE)syntax_error("':'", token);
+    thenElseNode->right = parseBlock(tokens,currentTokenIndex);
+    thenElseNode->right->type=ELSE_NODE;
+    return thenElseNode;
+}
+Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex){
+    Node* conditionalNode = (Node*)malloc(sizeof(Node));
+    conditionalNode->left = parseRelationalExpression(tokens,currentTokenIndex);
+    Token token = getCurrentToken(tokens,currentTokenIndex);    
+    switch (token.type){
+        case TOKEN_THEN:
+            conditionalNode->type=IF_NODE;
+            conditionalNode->right = parseThenElseNode(tokens,currentTokenIndex);
+        break;
+        case TOKEN_OPEN_BRACE:
+            conditionalNode->type=WHILE_NODE;
+            conditionalNode->right = parseBlock(tokens,currentTokenIndex);
+        break;
+        default:
+            syntax_error("'?' or '{'", token);
+        break;
+    }                                    
+    
 
-Node* parseIfElseStatements(cJSON* tokens, int *currentTokenIndex){
-    struct Node* ifElseNode = (struct Node*)malloc(sizeof(struct Node));
-    ifElseNode->type = IF_NODE;
-    // Parse the relational expression (x1 < x2)
-    ifElseNode->extra = parseRelationalExpression(tokens,currentTokenIndex);//need a new property
-    Token token = getNextToken(tokens,currentTokenIndex);                                        
-    if (token.type != TOKEN_THEN)syntax_error("'?'", token);
-    //true block
-    ifElseNode->right = parseBlock(tokens,currentTokenIndex);
-    token = getNextToken(tokens,currentTokenIndex);
-    if (token.type != TOKEN_ELSE)syntax_error("':'", token);
-    //false block
-    ifElseNode->left = parseBlock(tokens,currentTokenIndex);
-
-    return ifElseNode;
+    return conditionalNode;
+}
+Node* parseWhileStatement(cJSON* tokens, int *currentTokenIndex){
+    Node* whileNode = (Node*)malloc(sizeof(Node));
+    whileNode->type = WHILE_NODE;
+    whileNode->left=parseRelationalExpression(tokens,currentTokenIndex);
+    whileNode->right = parseBlock(tokens,currentTokenIndex);
+    return whileNode;
 }
 int main() {
     cJSON* root;
@@ -334,20 +401,28 @@ int main() {
     }
     int i=0;
     tokens = cJSON_GetObjectItem(root, "tokens");
+    Token token;
     while (currentTokenIndex < cJSON_GetArraySize(tokens))
-    {
-        switch(getCurrentToken(tokens, &currentTokenIndex).type){
+    {   
+        token=getCurrentToken(tokens, &currentTokenIndex);
+        switch(token.type){
+            case TOKEN_NEW_LINE:
+                token = getNextToken(tokens, &currentTokenIndex);
+                break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 parseDeclaration(tokens, &currentTokenIndex);
                 break;
             case TOKEN_IDENTIFIER:
-                Token token=getCurrentToken(tokens, &currentTokenIndex+1);//get next token with no modifying of Index
+                currentTokenIndex++;
+                token=getNextToken(tokens, &currentTokenIndex);//get next token with no modifying of Index
+                currentTokenIndex-=2;
                 if(token.type==TOKEN_ASSIGN)parseAssignment(tokens, &currentTokenIndex);
-                if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)parseIfElseStatement(tokens, &currentTokenIndex);
+                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)parseConditionalNode(tokens, &currentTokenIndex);//need to parse a node to determine if it's condition or loop
                 else syntax_error("<,>,==,=", token);
+            break;
             default:
-            printf("uknown sequence of tokens");
+            printf("uknown sequence of tokens at line %d ", token.line);
             exit(1);
         }
     }
