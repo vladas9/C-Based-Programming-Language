@@ -401,6 +401,14 @@ int main() {
     }
     int i=0;
     tokens = cJSON_GetObjectItem(root, "tokens");
+    Node* RootNode=(Node*)malloc(sizeof(Node));
+    
+    RootNode->type = ROOT_NODE;
+    RootNode->left = NULL;
+    RootNode->right = NULL;
+
+    Node* currentStatement = NULL;
+    Node* statementNode = NULL;
     Token token;
     while (currentTokenIndex < cJSON_GetArraySize(tokens))
     {   
@@ -411,22 +419,36 @@ int main() {
                 break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
-                parseDeclaration(tokens, &currentTokenIndex);
+                statementNode=parseDeclaration(tokens, &currentTokenIndex);
                 break;
             case TOKEN_IDENTIFIER:
                 currentTokenIndex++;
                 token=getNextToken(tokens, &currentTokenIndex);//get next token with no modifying of Index
                 currentTokenIndex-=2;
-                if(token.type==TOKEN_ASSIGN)parseAssignment(tokens, &currentTokenIndex);
-                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)parseConditionalNode(tokens, &currentTokenIndex);//need to parse a node to determine if it's condition or loop
+                if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, &currentTokenIndex);
+                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);//need to parse a node to determine if it's condition or loop
                 else syntax_error("<,>,==,=", token);
             break;
+            case TOKEN_EOF:
+                printf("Tree created successfully");
+                goto memoryCleaning;
+                break;
             default:
             printf("uknown sequence of tokens at line %d ", token.line);
             exit(1);
         }
+        if (currentStatement == NULL) {
+            RootNode->left = statementNode;
+            currentStatement = statementNode;
+        } else {
+            currentStatement->right = statementNode;
+            currentStatement = statementNode;
+        }
+
+
     }
+    memoryCleaning:
     cJSON_Delete(root);
     free(jsonBuffer);
-    return 0;
+    return RootNode;
 }
