@@ -56,12 +56,10 @@ Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex);//ready
 Node* parseAssignment(cJSON* tokens, int *currentTokenIndex);//in process...
 Node* parseExpression(cJSON* tokens, int *currentTokenIndex);
 Node* parseTerm(cJSON* tokens, int *currentTokenIndex);
-Node* parseFactor();
 Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex);
 Node* parseBinaryOperator(int precedence, cJSON* tokens, int *currentTokenIndex);
-Node* parseLoop();
 Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex);
-Node* parsePrint();
+Node* parsePrint(cJSON* tokens, int *currentTokenIndex);
 Token getCurrentToken(cJSON* tokens, int* currentTokenIndex){
     cJSON* token = cJSON_GetArrayItem(tokens, *currentTokenIndex);
     Token currentToken;
@@ -375,6 +373,13 @@ Node* parseWhileStatement(cJSON* tokens, int *currentTokenIndex){
     whileNode->right = parseBlock(tokens,currentTokenIndex);
     return whileNode;
 }
+Node* parsePrint(cJSON* tokens, int *currentTokenIndex){
+    getNextToken(tokens,currentTokenIndex);
+    Node* printNode=(Node*)malloc(sizeof(Node));
+    printNode->type=PRINT_NODE;
+    printNode->left=parsePrimaryExpression(tokens, currentTokenIndex);
+    return printNode;
+}
 int main() {
     cJSON* root;
     cJSON* tokens;
@@ -429,6 +434,9 @@ int main() {
                 else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);//need to parse a node to determine if it's condition or loop
                 else syntax_error("<,>,==,=", token);
             break;
+            case TOKEN_PRINT:
+                statementNode=parsePrint(tokens, &currentTokenIndex);
+                break;
             case TOKEN_EOF:
                 printf("Tree created successfully");
                 goto memoryCleaning;
