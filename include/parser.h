@@ -2,6 +2,8 @@
 #define PARSER_H
 
 typedef enum{
+    ROOT_NODE,
+    
     DEC_INT_NODE,       //declaration
     DEC_DOUBLE_NODE,
     ASS_NODE,           //assignment
@@ -38,10 +40,6 @@ struct Node{
     char* strValue;  //IDENTIFIER nodes
     Node* left;
     Node* right;
-};
-typedef struct RootToken RootToken;
-struct RootToken{
-    Node* token_arr;
 };
 
 #endif
