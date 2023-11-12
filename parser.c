@@ -148,7 +148,7 @@ Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex) {
 }
 Node* parseBinaryOperator(int minPrecedence, cJSON* tokens, int *currentTokenIndex) {
     struct Node* left = parsePrimaryExpression(tokens, currentTokenIndex);
-    while (getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_NEW_LINE && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_CLOSE_PAREN) {
+    while (getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_EOF && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_NEW_LINE && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_CLOSE_PAREN) {
         Token token = getCurrentToken(tokens, currentTokenIndex);
         int precedence = getOperatorPrecedence(token.type);
 
@@ -213,8 +213,9 @@ Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
     switch (token.type){
     case TOKEN_ASSIGN:
         *currentTokenIndex=*currentTokenIndex-2;
-        parseAssignment(tokens, currentTokenIndex);break; //need to add something to connect declaration identifier with assignment identifier
+        declarationNode->right=parseAssignment(tokens, currentTokenIndex);break; //need to add something to connect declaration identifier with assignment identifier
     case TOKEN_NEW_LINE:break;
+    case TOKEN_EOF:break;
     default:syntax_error("new line", token);break;
     }
     return declarationNode;
@@ -239,7 +240,7 @@ Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
     assignmentNode->left = parseExpression(tokens, currentTokenIndex); 
     // Expect nline
     token = getNextToken(tokens, currentTokenIndex);
-    if (token.type != TOKEN_NEW_LINE) {
+    if (token.type != TOKEN_NEW_LINE && token.type != TOKEN_EOF) {
         syntax_error("new line", token);
     }
 
