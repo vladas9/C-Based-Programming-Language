@@ -2,18 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "include/parser.h"
-
-typedef struct SymbolTableEntry {
-    char *variable;
-    union 
-    {
-        double d_val;
-        int i_val;
-    }value;
-    struct SymbolTableEntry *next;
-} SymbolTableEntry;
+#include "include/interpreter.h"
 
 SymbolTableEntry *symbolTable = NULL;
+
 
 double interpret(Node *node);
 
