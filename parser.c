@@ -268,6 +268,9 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
             case TOKEN_NEW_LINE:
                 token = getNextToken(tokens, currentTokenIndex);
                 break;
+            case TOKEN_PRINT:
+                statementNode=parsePrint(tokens, &currentTokenIndex);
+                break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, currentTokenIndex);
@@ -332,6 +335,7 @@ Node* parseThenElseNode(cJSON* tokens, int *currentTokenIndex){
     return thenElseNode;
 }
 Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex){
+    Node* RootConditionalNode=(Node*)malloc(sizeof(Node));
     Node* conditionalNode = (Node*)malloc(sizeof(Node));
     conditionalNode->left = parseRelationalExpression(tokens,currentTokenIndex);
     Token token = getCurrentToken(tokens,currentTokenIndex);    
@@ -339,16 +343,19 @@ Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex){
         case TOKEN_THEN:
             conditionalNode->type=IF_NODE;
             conditionalNode->right = parseThenElseNode(tokens,currentTokenIndex);
+            RootConditionalNode->type=IF_ROOT_NODE;
         break;
         case TOKEN_OPEN_BRACE:
             conditionalNode->type=WHILE_NODE;
             conditionalNode->right = parseBlock(tokens,currentTokenIndex);
+            RootConditionalNode->type=WHILE_ROOT_NODE;
         break;
         default:
             syntax_error("'?' or '{'", token);
         break;
-    }                                    
-    return conditionalNode;
+    }  
+    RootConditionalNode->left=conditionalNode;                            
+    return RootConditionalNode;
 }
 Node* parseWhileStatement(cJSON* tokens, int *currentTokenIndex){
     Node* whileNode = (Node*)malloc(sizeof(Node));
