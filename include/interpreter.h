@@ -3,6 +3,7 @@
 
 typedef struct SymbolTableEntry {
     char *variable;
+    char* type;
     union 
     {
         double d_val;
@@ -11,5 +12,6 @@ typedef struct SymbolTableEntry {
     struct SymbolTableEntry *next;
 } SymbolTableEntry;
 
+int interpreter(Node *ast);
 
 #endif
