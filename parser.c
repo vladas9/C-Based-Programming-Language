@@ -266,7 +266,7 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
         switch(token.type){
             case TOKEN_NEW_LINE:
                 token = getNextToken(tokens, currentTokenIndex);
-                statementNode=NULL;
+                //statementNode=NULL;
                 break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, currentTokenIndex);
@@ -336,7 +336,7 @@ Node* parseThenElseNode(cJSON* tokens, int *currentTokenIndex){
     thenElseNode->left = parseBlock(tokens,currentTokenIndex);
     thenElseNode->left->type=THEN_NODE;
     token=getNextToken(tokens,currentTokenIndex);
-    if (token.type==TOKEN_NEW_LINE){
+    if (token.type==TOKEN_NEW_LINE || token.type==TOKEN_EOF){
         thenElseNode->right=NULL;
         return thenElseNode;
     }
