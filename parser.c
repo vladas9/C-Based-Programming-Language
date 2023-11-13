@@ -269,11 +269,14 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
                 token = getNextToken(tokens, currentTokenIndex);
                 break;
             case TOKEN_PRINT:
-                statementNode=parsePrint(tokens, &currentTokenIndex);
+                statementNode=parsePrint(tokens, currentTokenIndex);
                 break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, currentTokenIndex);
+                break;
+            case TOKEN_OPEN_PAREN:
+                statementNode=parseConditionalNode(tokens, currentTokenIndex);
                 break;
             case TOKEN_IDENTIFIER:
                 (*currentTokenIndex)+=1;
@@ -365,7 +368,11 @@ Node* parseWhileStatement(cJSON* tokens, int *currentTokenIndex){
     return whileNode;
 }
 Node* parsePrint(cJSON* tokens, int *currentTokenIndex){
-    getNextToken(tokens,currentTokenIndex);
+    Token token=getNextToken(tokens,currentTokenIndex);
+    token=getCurrentToken(tokens,currentTokenIndex);
+    if(token.type!=TOKEN_OPEN_PAREN){
+        syntax_error("'('", token);
+    }
     Node* printNode=(Node*)malloc(sizeof(Node));
     printNode->type=PRINT_NODE;
     printNode->left=parsePrimaryExpression(tokens, currentTokenIndex);
@@ -421,9 +428,12 @@ int main() {
                 token=getNextToken(tokens, &currentTokenIndex);//get next token with no modifying of Index
                 currentTokenIndex-=2;
                 if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, &currentTokenIndex);
-                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);//need to parse a node to determine if it's condition or loop
+                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);
                 else syntax_error("<,>,==,=", token);
             break;
+            case TOKEN_OPEN_PAREN:
+                statementNode=parseConditionalNode(tokens, &currentTokenIndex);
+                break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, &currentTokenIndex);
                 break;
