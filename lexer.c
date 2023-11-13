@@ -315,7 +315,7 @@ void token_to_json(FILE *file, Token token) {
 
 
 int main(){
-    FILE *source = fopen("example\example.capatichi", "r");
+    FILE *source = fopen("example\\example.capatichi", "r");
     FILE *jsonFile = fopen("tokens/tokens.json", "w");
     Token token;
     if(!source){
