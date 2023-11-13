@@ -74,11 +74,10 @@ void freeSymbolTable(SymbolTableEntry *table){
     }
     
 }
-
+// Check if number is an integer or a double
 int isWholeNumber(double value) {
     return value == floor(value);
 }
-
 SymbolTableEntry *findOrAddSymbolTableEntry(const char* variable, int addIfNotFound, NodeType type){
     SymbolTableEntry *entry = symbolTable;
     while (entry) {
@@ -110,16 +109,12 @@ SymbolTableEntry *findOrAddSymbolTableEntry(const char* variable, int addIfNotFo
 
 double interpret(Node *ast){
     SymbolTableEntry *entry;
-    // if(ast->type == ASS_NODE){
-    //     printf("%s\n", NodeTypeToString(ast->left->type));
-    //     printf("%s\n", ast->strValue);
-    // }
     double leftVal, rightVal;
     if(!ast){
         // printf("NO node\n");
-        return;
+        return 0;
     }
-    // printf("%s\n", NodeTypeToString(ast->type));
+    printf("%s\n", NodeTypeToString(ast->type));
     switch (ast->type)
     {
     case ROOT_NODE:
@@ -153,8 +148,6 @@ double interpret(Node *ast){
             printf("ERROR: undeclared variable %s\n", ast->strValue);
             exit(EXIT_FAILURE);
         }
-
-        // Evaluate the right-hand side of the assignment
         double leftVal = interpret(ast->left);
         if (strcmp(entry->type, "int") == 0) {
             if (isWholeNumber(leftVal)) {
