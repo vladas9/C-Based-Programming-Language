@@ -62,6 +62,11 @@ Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex);
 Node* parsePrint(cJSON* tokens, int *currentTokenIndex);
 
 Token getCurrentToken(cJSON* tokens, int* currentTokenIndex){
+    if(*currentTokenIndex>=cJSON_GetArraySize(tokens)){
+        Token endToken;
+        endToken.type=TOKEN_EOF;
+        return endToken;
+    }
     cJSON* token = cJSON_GetArrayItem(tokens, *currentTokenIndex);
     Token currentToken;
     const char* jsonType = cJSON_GetObjectItem(token, "type")->valuestring;
@@ -395,7 +400,7 @@ int main() {
     FILE* file = fopen("./tokens/tokens.json", "r");
     if (file == NULL) {
         printf("Error opening tokens.json file.\n");
-        return 1;
+        exit(EXIT_FAILURE);
     }
     
     fseek(file, 0, SEEK_END);
@@ -457,7 +462,7 @@ int main() {
                 break;
             default:
             printf("Incorrect token at start line %d ", token.line);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         if (currentStatement == NULL) {
             RootNode->left = statementNode;
