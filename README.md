@@ -5,22 +5,18 @@
 
 ```
 
-## Input, Output
+## Output
 ```
 print()
-x = input('message')
 ```
 
 ## Number operations
 ```
 x = y
-x + y || x += y
-x - y || x -= y
-x * y || x*= y
-x/y   || x/= y      # if int it will be div
-x//y  || x//= y    # div for double
-x mod y      # should work for both type
-
+x + y 
+x - y 
+x * y 
+x/y   
 ```
 ## loop
 ```
@@ -28,7 +24,7 @@ condition {
 
 }    
 ```
-## if statemant
+## if statement
 ```
 condition ?{    #then
 

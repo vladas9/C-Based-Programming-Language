@@ -385,13 +385,14 @@ Node* parsePrint(cJSON* tokens, int *currentTokenIndex){
     printNode->right=NULL;
     return printNode;
 }
-Node *parser(){
+int main() {
     cJSON* root;
     cJSON* tokens;
     int currentTokenIndex=0;
     FILE* file = fopen("./tokens/tokens.json", "r");
     if (file == NULL) {
         printf("Error opening tokens.json file.\n");
+        return 1;
     }
     
     fseek(file, 0, SEEK_END);
@@ -406,6 +407,7 @@ Node *parser(){
     root = cJSON_Parse(jsonBuffer);
     if (!root) {
         fprintf(stderr, "JSON is fucked\n");
+        return 1;
     }
     tokens = cJSON_GetObjectItem(root, "tokens");
     Node* RootNode=(Node*)malloc(sizeof(Node));
@@ -433,9 +435,12 @@ Node *parser(){
                 token=getNextToken(tokens, &currentTokenIndex);//get next token with no modifying of Index
                 currentTokenIndex-=2;
                 if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, &currentTokenIndex);
-                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);//need to parse a node to determine if it's condition or loop
+                else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);
                 else syntax_error("<,>,==,=", token);
             break;
+            case TOKEN_OPEN_PAREN:
+                statementNode=parseConditionalNode(tokens, &currentTokenIndex);
+                break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, &currentTokenIndex);
                 break;
