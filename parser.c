@@ -267,6 +267,7 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
         switch(token.type){
             case TOKEN_NEW_LINE:
                 token = getNextToken(tokens, currentTokenIndex);
+                statementNode=NULL;
                 break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, currentTokenIndex);
@@ -381,6 +382,7 @@ Node* parsePrint(cJSON* tokens, int *currentTokenIndex){
     Node* printNode=(Node*)malloc(sizeof(Node));
     printNode->type=PRINT_NODE;
     printNode->left=parsePrimaryExpression(tokens, currentTokenIndex);
+    printNode->right=NULL;
     return printNode;
 }
 int main() {
