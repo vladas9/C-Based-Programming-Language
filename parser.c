@@ -175,7 +175,6 @@ Node* parseBinaryOperator(int minPrecedence, cJSON* tokens, int *currentTokenInd
 
         left = operatorNode;
     }
-
     return left;
 }
 Node* parseExpression(cJSON* tokens, int *currentTokenIndex) {
@@ -429,6 +428,7 @@ int main() {
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, &currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_IDENTIFIER:
                 currentTokenIndex++;
@@ -437,12 +437,15 @@ int main() {
                 if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, &currentTokenIndex);
                 else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);
                 else syntax_error("<,>,==,=", token);
+                statementNode->line=token.line;
             break;
             case TOKEN_OPEN_PAREN:
                 statementNode=parseConditionalNode(tokens, &currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, &currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_EOF:
                 printf("Tree created successfully");
@@ -455,6 +458,8 @@ int main() {
         if (currentStatement == NULL) {
             RootNode->left = statementNode;
             currentStatement = statementNode;
+            currentStatement->line=token.line;
+            RootNode->line = 0;
         } else {
             currentStatement->right = statementNode;
             currentStatement = statementNode;
