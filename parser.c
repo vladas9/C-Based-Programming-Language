@@ -331,7 +331,12 @@ Node* parseThenElseNode(cJSON* tokens, int *currentTokenIndex){
     if(token.type!=TOKEN_THEN)syntax_error("'?'", token);
     thenElseNode->left = parseBlock(tokens,currentTokenIndex);
     thenElseNode->left->type=THEN_NODE;
-     token=getNextToken(tokens,currentTokenIndex);
+    token=getNextToken(tokens,currentTokenIndex);
+    if (token.type==TOKEN_NEW_LINE){
+        thenElseNode->right=NULL;
+        return thenElseNode;
+    }
+    
     if(token.type!=TOKEN_ELSE)syntax_error("':'", token);
     thenElseNode->right = parseBlock(tokens,currentTokenIndex);
     thenElseNode->right->type=ELSE_NODE;
