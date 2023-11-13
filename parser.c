@@ -237,7 +237,7 @@ Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
 
     // Parse the right-hand side (expression or value)
     assignmentNode->left = parseExpression(tokens, currentTokenIndex); 
-    // Expect nline
+    // Expect new line
     token = getNextToken(tokens, currentTokenIndex);
     if (token.type != TOKEN_NEW_LINE) {
         syntax_error("new line", token);
@@ -280,7 +280,7 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
                 else syntax_error("<,>,==,=", token);
                 break;
             default:
-            printf("uknown sequence of tokens at line %d ", token.line);
+            printf("unknown sequence of tokens at line %d ", token.line);
             exit(1);
         }
         // Link the statements in the block

@@ -58,7 +58,7 @@ const char* NodeTypeToString(NodeType type) {
         case LITERAL_DOUBLE_NODE:
             return "LITERAL_DOUBLE_NODE";
         default:
-            return "NO_NODE";
+            return "Unknown node";
     }
 }
 
@@ -105,18 +105,18 @@ double interpret(Node *ast){
     // }
     double leftVal, rightVal;
     if(!ast){
-        printf("NO node\n");
+        // printf("NO node\n");
         return;
     }
-    printf("%s\n", NodeTypeToString(ast->type));
+    // printf("%s\n", NodeTypeToString(ast->type));
     switch (ast->type)
     {
     case ROOT_NODE:
-        printf("Enter root\n");
+        // printf("Enter root\n");
         return interpret(ast->left);
     case DEC_INT_NODE:
     case DEC_DOUBLE_NODE:
-        printf("declared successful\n");
+        // printf("declared successful\n");
         entry = findOrAddSymbolTableEntry(ast->left->strValue, 0, ast->type);
         if(entry){
             printf("Variable %s already declared\n", ast->left->strValue);
@@ -136,7 +136,7 @@ double interpret(Node *ast){
     case LITERAL_DOUBLE_NODE:
         return ast->Value.doubleValue;
     case ASS_NODE:
-        printf("Start assignment\n");
+        // printf("Start assignment\n");
         entry = findOrAddSymbolTableEntry(ast->strValue, 0, ast->type);
         if (!entry) {
             printf("ERROR: undeclared variable %s\n", ast->strValue);
@@ -174,22 +174,22 @@ double interpret(Node *ast){
         }
         break;
     case PLUS_NODE:
-        printf("ADD\n");
+        // printf("ADD\n");
         return interpret(ast->left) + interpret(ast->right);
     case MINUS_NODE:
-        printf("MIN\n");
+        // printf("MIN\n");
         return interpret(ast->left) - interpret(ast->right);
     case MULTIPLY_NODE:
-        printf("MULTI\n");
+        // printf("MULTI\n");
         return interpret(ast->left) * interpret(ast->right);
     case DIV_NODE:
-        printf("DIV\n");
+        // printf("DIV\n");
         return interpret(ast->left) / interpret(ast->right);
     case GREATER_NODE:
-        printf("GREATER\n");
+        // printf("GREATER\n");
         return interpret(ast->left) > interpret(ast->right);
     case IF_NODE:
-        printf("IF\n");
+        // printf("IF\n");
         if((int)interpret(ast->left)){
             interpret(ast->right->left->left);
         }else{
@@ -197,12 +197,10 @@ double interpret(Node *ast){
         }
         break;
     case WHILE_NODE:
-        printf("WHILE\n");
+        // printf("WHILE\n");
         while((int)interpret(ast->left)){
-            interpret(ast->right);
+            interpret(ast->right->left);
         }
-    case BLOCK_NODE:
-        interpret(ast->left);
     case PRINT_NODE:
         leftVal= interpret(ast->left);
         if(isWholeNumber(leftVal)){

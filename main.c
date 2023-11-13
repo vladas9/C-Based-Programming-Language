@@ -11,6 +11,6 @@ int main(){
     }
     printf("Start parser\n");
     Node *ast =parser();
-    printf("\nStart interpreter\n");
+    printf("\nStart interpreter\n\n\n");
     interpreter(ast);
 }
