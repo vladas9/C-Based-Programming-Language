@@ -1,5 +1,0 @@
-#i num1
-#i num2
-num1 = 4
-num2 = 2
-print num1

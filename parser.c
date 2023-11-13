@@ -148,7 +148,7 @@ Node* parsePrimaryExpression(cJSON* tokens, int *currentTokenIndex) {
 }
 Node* parseBinaryOperator(int minPrecedence, cJSON* tokens, int *currentTokenIndex) {
     struct Node* left = parsePrimaryExpression(tokens, currentTokenIndex);
-    while (getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_NEW_LINE && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_CLOSE_PAREN) {
+    while (getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_EOF && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_NEW_LINE && getCurrentToken(tokens, currentTokenIndex).type!=TOKEN_CLOSE_PAREN) {
         Token token = getCurrentToken(tokens, currentTokenIndex);
         int precedence = getOperatorPrecedence(token.type);
 
@@ -213,8 +213,9 @@ Node* parseDeclaration(cJSON* tokens, int *currentTokenIndex) {
     switch (token.type){
     case TOKEN_ASSIGN:
         *currentTokenIndex=*currentTokenIndex-2;
-        parseAssignment(tokens, currentTokenIndex);break; //need to add something to connect declaration identifier with assignment identifier
+        declarationNode->right=parseAssignment(tokens, currentTokenIndex);break; //need to add something to connect declaration identifier with assignment identifier
     case TOKEN_NEW_LINE:break;
+    case TOKEN_EOF:break;
     default:syntax_error("new line", token);break;
     }
     return declarationNode;
@@ -237,9 +238,9 @@ Node* parseAssignment(cJSON* tokens, int *currentTokenIndex) {
 
     // Parse the right-hand side (expression or value)
     assignmentNode->left = parseExpression(tokens, currentTokenIndex); 
-    // Expect new line
+    // Expect nline
     token = getNextToken(tokens, currentTokenIndex);
-    if (token.type != TOKEN_NEW_LINE) {
+    if (token.type != TOKEN_NEW_LINE && token.type != TOKEN_EOF) {
         syntax_error("new line", token);
     }
 
@@ -267,6 +268,9 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
             case TOKEN_NEW_LINE:
                 token = getNextToken(tokens, currentTokenIndex);
                 break;
+            case TOKEN_PRINT:
+                statementNode=parsePrint(tokens, &currentTokenIndex);
+                break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, currentTokenIndex);
@@ -280,7 +284,7 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
                 else syntax_error("<,>,==,=", token);
                 break;
             default:
-            printf("unknown sequence of tokens at line %d ", token.line);
+            printf("uknown sequence of tokens at line %d ", token.line);
             exit(1);
         }
         // Link the statements in the block
@@ -331,6 +335,7 @@ Node* parseThenElseNode(cJSON* tokens, int *currentTokenIndex){
     return thenElseNode;
 }
 Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex){
+    Node* RootConditionalNode=(Node*)malloc(sizeof(Node));
     Node* conditionalNode = (Node*)malloc(sizeof(Node));
     conditionalNode->left = parseRelationalExpression(tokens,currentTokenIndex);
     Token token = getCurrentToken(tokens,currentTokenIndex);    
@@ -338,16 +343,19 @@ Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex){
         case TOKEN_THEN:
             conditionalNode->type=IF_NODE;
             conditionalNode->right = parseThenElseNode(tokens,currentTokenIndex);
+            RootConditionalNode->type=IF_ROOT_NODE;
         break;
         case TOKEN_OPEN_BRACE:
             conditionalNode->type=WHILE_NODE;
             conditionalNode->right = parseBlock(tokens,currentTokenIndex);
+            RootConditionalNode->type=WHILE_ROOT_NODE;
         break;
         default:
             syntax_error("'?' or '{'", token);
         break;
-    }                                    
-    return conditionalNode;
+    }  
+    RootConditionalNode->left=conditionalNode;                            
+    return RootConditionalNode;
 }
 Node* parseWhileStatement(cJSON* tokens, int *currentTokenIndex){
     Node* whileNode = (Node*)malloc(sizeof(Node));
@@ -363,13 +371,14 @@ Node* parsePrint(cJSON* tokens, int *currentTokenIndex){
     printNode->left=parsePrimaryExpression(tokens, currentTokenIndex);
     return printNode;
 }
-Node *parser(){
+Node *parser() {
     cJSON* root;
     cJSON* tokens;
     int currentTokenIndex=0;
     FILE* file = fopen("./tokens/tokens.json", "r");
     if (file == NULL) {
-        printf("Error opening tokens.json file.\n");
+        perror("Error opening tokens.json file.\n");
+        exit(EXIT_FAILURE);
     }
     
     fseek(file, 0, SEEK_END);
@@ -383,7 +392,8 @@ Node *parser(){
     
     root = cJSON_Parse(jsonBuffer);
     if (!root) {
-        fprintf(stderr, "JSON is fucked\n");
+        perror("Json is fucked");
+        exit(EXIT_FAILURE);
     }
     tokens = cJSON_GetObjectItem(root, "tokens");
     Node* RootNode=(Node*)malloc(sizeof(Node));

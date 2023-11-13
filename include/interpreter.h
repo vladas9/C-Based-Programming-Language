@@ -3,7 +3,7 @@
 
 typedef struct SymbolTableEntry {
     char *variable;
-    char* type;
+    char *type;
     union 
     {
         double d_val;

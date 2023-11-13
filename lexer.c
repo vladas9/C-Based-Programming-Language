@@ -325,9 +325,17 @@ Token lexer(){
     FILE *source = fopen(name, "r");
     FILE *jsonFile = fopen("tokens/tokens.json", "w");
     Token token;
+    if (jsonFile == NULL) {
+        mkdir("tokens", 0755); // ACCESS_PERMISSIONS is typically 0755
+        jsonFile = fopen("tokens/tokens.json", "w"); // Try again
+    }
     if(!source){
         perror("Error opening file");
-        return token;
+        exit(EXIT_FAILURE);
+    }
+    if(!jsonFile){
+        perror("Unable to open json file");
+        exit(EXIT_FAILURE);
     }
     token.line = 1;
     fputs("{\n", jsonFile);

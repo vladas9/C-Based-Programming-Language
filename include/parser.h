@@ -20,7 +20,9 @@ typedef enum{
     EQUAL_NODE,         //node for ==
     LESS_NODE,         //node for <
     WHILE_NODE,         //while
+    WHILE_ROOT_NODE,
     IF_NODE,            //if
+    IF_ROOT_NODE,
     THEN_ELSE_NODE,     //then-else
     THEN_NODE,
     ELSE_NODE,

@@ -64,6 +64,17 @@ const char* NodeTypeToString(NodeType type) {
 
 SymbolTableEntry *symbolTable = NULL;
 
+void freeSymbolTable(SymbolTableEntry *table){
+    while (table != NULL)
+    {
+        SymbolTableEntry *temp = table;
+        table = table->next;
+        free(temp->variable);
+        free(temp);
+    }
+    
+}
+
 int isWholeNumber(double value) {
     return value == floor(value);
 }
@@ -128,7 +139,7 @@ double interpret(Node *ast){
                     entry = findOrAddSymbolTableEntry(ast->left->strValue, 1, LITERAL_INT_NODE);
                 }
                 interpret(ast->right);
-                return;
+                return 0;
         }
         break;
     case LITERAL_INT_NODE:
@@ -188,19 +199,29 @@ double interpret(Node *ast){
     case GREATER_NODE:
         // printf("GREATER\n");
         return interpret(ast->left) > interpret(ast->right);
-    case IF_NODE:
-        // printf("IF\n");
-        if((int)interpret(ast->left)){
-            interpret(ast->right->left->left);
-        }else{
-            interpret(ast->right->right->left);
-        }
+    case LESS_NODE:
+        return interpret(ast->left) < interpret(ast->right);
+    case EQUAL_NODE:
+        return interpret(ast->left) == interpret(ast->right);
+    case BLOCK_NODE:
+        interpret(ast->left);
         break;
-    case WHILE_NODE:
-        // printf("WHILE\n");
-        while((int)interpret(ast->left)){
-            interpret(ast->right->left);
+    case IF_ROOT_NODE:
+        // printf("IF\n");
+        if((int)interpret(ast->left->left)){
+            interpret(ast->left->right->left->left);
+        }else{
+            interpret(ast->left->right->right->left);
         }
+        interpret(ast->right);
+        break;
+    case WHILE_ROOT_NODE:
+        // printf("WHILE\n");
+        while((int)interpret(ast->left->left)){
+            interpret(ast->left->right);
+        }
+        interpret(ast->right);
+        break;
     case PRINT_NODE:
         leftVal= interpret(ast->left);
         if(isWholeNumber(leftVal)){
@@ -211,6 +232,8 @@ double interpret(Node *ast){
         interpret(ast->right);
         break;
     default:
+        perror("Unknown Node type");
+        exit(EXIT_FAILURE);
         break;
     }
 }
@@ -218,6 +241,6 @@ double interpret(Node *ast){
 
 int interpreter(Node *ast) {
     interpret(ast);
-
+    freeSymbolTable(symbolTable);
     return 0;
 }
