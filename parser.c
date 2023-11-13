@@ -270,13 +270,16 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
                 break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_OPEN_PAREN:
                 statementNode=parseConditionalNode(tokens, currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_IDENTIFIER:
                 (*currentTokenIndex)+=1;
@@ -285,6 +288,7 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
                 if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, currentTokenIndex);
                 else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, currentTokenIndex);//need to parse a node to determine if it's condition or loop
                 else syntax_error("<,>,==,=", token);
+                statementNode->line=token.line;
                 break;
             default:
             printf("uknown sequence of tokens at line %d ", token.line);
