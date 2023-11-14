@@ -1,3 +1,3 @@
 myprogram: 
-	gcc -g main.c lexer.c parser.c interpreter.c -o .exe/myprogram
-	./.exe/myprogram.exe
+	gcc -g main.c lexer.c parser.c interpreter.c -o myprogram
+	./myprogram.exe
