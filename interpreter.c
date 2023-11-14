@@ -5,63 +5,6 @@
 #include "include/parser.h"
 #include "include/interpreter.h"
 
-const char* NodeTypeToString(NodeType type) {
-    switch (type) {
-        case ROOT_NODE:
-            return "ROOT_NODE";
-        case DEC_INT_NODE:
-            return "DEC_INT_NODE";
-        case DEC_DOUBLE_NODE:
-            return "DEC_DOUBLE_NODE";
-        case ASS_NODE:
-            return "ASS_NODE";
-        case VAR_NODE:
-            return "VAR_NODE";
-        case EXPR_NODE:
-            return "EXPR_NODE";
-        case TERM_NODE:
-            return "TERM_NODE";
-        case FACTOR_NODE:
-            return "FACTOR_NODE";
-        case PLUS_NODE:
-            return "PLUS_NODE";
-        case MINUS_NODE:
-            return "MINUS_NODE";
-        case DIV_NODE:
-            return "DIV_NODE";
-        case MULTIPLY_NODE:
-            return "MULTIPLY_NODE";
-        case MOD_NODE:
-            return "MOD_NODE";
-        case GREATER_NODE:
-            return "GREATER_NODE";
-        case EQUAL_NODE:
-            return "EQUAL_NODE";
-        case LESS_NODE:
-            return "LESS_NODE";
-        case WHILE_NODE:
-            return "WHILE_NODE";
-        case IF_NODE:
-            return "IF_NODE";
-        case THEN_ELSE_NODE:
-            return "THEN_ELSE_NODE";
-        case THEN_NODE:
-            return "THEN_NODE";
-        case ELSE_NODE:
-            return "ELSE_NODE";
-        case BLOCK_NODE:
-            return "BLOCK_NODE";
-        case PRINT_NODE:
-            return "PRINT_NODE";
-        case LITERAL_INT_NODE:
-            return "LITERAL_INT_NODE";
-        case LITERAL_DOUBLE_NODE:
-            return "LITERAL_DOUBLE_NODE";
-        default:
-            return "Unknown node";
-    }
-}
-
 SymbolTableEntry *symbolTable = NULL;
 
 void freeSymbolTable(SymbolTableEntry *table){
@@ -114,7 +57,7 @@ double interpret(Node *ast){
         // printf("NO node\n");
         return 0;
     }
-    printf("%s\n", NodeTypeToString(ast->type));
+    // printf("%s\n", NodeTypeToString(ast->type));
     switch (ast->type)
     {
     case ROOT_NODE:

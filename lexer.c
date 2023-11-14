@@ -49,7 +49,6 @@ Token get_next_token(FILE *source, int line){
         ch = fgetc(source);
         // Check if it a new line
         if(ch == '\n'){ 
-            line ++;
             token.type = TOKEN_NEW_LINE;
             token.line = line;
             token.lexeme = "";
@@ -343,6 +342,9 @@ Token lexer(){
     do {
         token = get_next_token(source, token.line);
         token_to_json(jsonFile, token);
+        if(token.type == TOKEN_NEW_LINE){
+            token.line++;
+        }
         // printf("%s %s %i\n", getTokenTypeName(token.type), token.lexeme, token.line);
         // Process the token, e.g., print it or store it for the next phase
     } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);

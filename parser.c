@@ -385,14 +385,14 @@ Node* parsePrint(cJSON* tokens, int *currentTokenIndex){
     printNode->right=NULL;
     return printNode;
 }
-int main() {
+Node *parser() {
     cJSON* root;
     cJSON* tokens;
     int currentTokenIndex=0;
     FILE* file = fopen("./tokens/tokens.json", "r");
     if (file == NULL) {
         printf("Error opening tokens.json file.\n");
-        return 1;
+        exit(EXIT_FAILURE);
     }
     
     fseek(file, 0, SEEK_END);
@@ -407,7 +407,7 @@ int main() {
     root = cJSON_Parse(jsonBuffer);
     if (!root) {
         fprintf(stderr, "JSON is fucked\n");
-        return 1;
+        exit(EXIT_FAILURE);
     }
     tokens = cJSON_GetObjectItem(root, "tokens");
     Node* RootNode=(Node*)malloc(sizeof(Node));
