@@ -62,6 +62,11 @@ Node* parseConditionalNode(cJSON* tokens, int *currentTokenIndex);
 Node* parsePrint(cJSON* tokens, int *currentTokenIndex);
 
 Token getCurrentToken(cJSON* tokens, int* currentTokenIndex){
+    if(*currentTokenIndex>=cJSON_GetArraySize(tokens)){
+        Token endToken;
+        endToken.type=TOKEN_EOF;
+        return endToken;
+    }
     cJSON* token = cJSON_GetArrayItem(tokens, *currentTokenIndex);
     Token currentToken;
     const char* jsonType = cJSON_GetObjectItem(token, "type")->valuestring;
@@ -175,7 +180,6 @@ Node* parseBinaryOperator(int minPrecedence, cJSON* tokens, int *currentTokenInd
 
         left = operatorNode;
     }
-
     return left;
 }
 Node* parseExpression(cJSON* tokens, int *currentTokenIndex) {
@@ -267,17 +271,20 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
         switch(token.type){
             case TOKEN_NEW_LINE:
                 token = getNextToken(tokens, currentTokenIndex);
-                statementNode=NULL;
+                //statementNode=NULL;
                 break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_OPEN_PAREN:
                 statementNode=parseConditionalNode(tokens, currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_IDENTIFIER:
                 (*currentTokenIndex)+=1;
@@ -286,6 +293,7 @@ Node* parseBlock(cJSON* tokens, int *currentTokenIndex){
                 if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, currentTokenIndex);
                 else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, currentTokenIndex);//need to parse a node to determine if it's condition or loop
                 else syntax_error("<,>,==,=", token);
+                statementNode->line=token.line;
                 break;
             default:
             printf("uknown sequence of tokens at line %d ", token.line);
@@ -333,7 +341,7 @@ Node* parseThenElseNode(cJSON* tokens, int *currentTokenIndex){
     thenElseNode->left = parseBlock(tokens,currentTokenIndex);
     thenElseNode->left->type=THEN_NODE;
     token=getNextToken(tokens,currentTokenIndex);
-    if (token.type==TOKEN_NEW_LINE){
+    if (token.type==TOKEN_NEW_LINE || token.type==TOKEN_EOF){
         thenElseNode->right=NULL;
         return thenElseNode;
     }
@@ -429,6 +437,7 @@ Node *parser() {
             case TOKEN_INT_DECL: 
             case TOKEN_DOUBLE_DECL:
                 statementNode=parseDeclaration(tokens, &currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_IDENTIFIER:
                 currentTokenIndex++;
@@ -437,12 +446,15 @@ Node *parser() {
                 if(token.type==TOKEN_ASSIGN)statementNode=parseAssignment(tokens, &currentTokenIndex);
                 else if(token.type==TOKEN_LESS || token.type==TOKEN_GREATER || token.type==TOKEN_EQUAL)statementNode=parseConditionalNode(tokens, &currentTokenIndex);
                 else syntax_error("<,>,==,=", token);
+                statementNode->line=token.line;
             break;
             case TOKEN_OPEN_PAREN:
                 statementNode=parseConditionalNode(tokens, &currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_PRINT:
                 statementNode=parsePrint(tokens, &currentTokenIndex);
+                statementNode->line=token.line;
                 break;
             case TOKEN_EOF:
                 printf("Tree created successfully");
@@ -450,11 +462,13 @@ Node *parser() {
                 break;
             default:
             printf("Incorrect token at start line %d ", token.line);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         if (currentStatement == NULL) {
             RootNode->left = statementNode;
             currentStatement = statementNode;
+            currentStatement->line=token.line;
+            RootNode->line = 0;
         } else {
             currentStatement->right = statementNode;
             currentStatement = statementNode;

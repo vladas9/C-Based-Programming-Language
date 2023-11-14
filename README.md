@@ -3,6 +3,19 @@
 To start the program just run the makefile
 And after run, type the path to file that you want to interpret
 
+# File structure
+##### Lexer: 
+    lexer.c
+    include/lexer.h
+##### Parser:
+    parser.c
+    include/parser.h
+##### Interpreter:
+    interpreter.c
+    include/interpreter.h
+##### Tokens:
+    tokens/tokens.json
+
 # Syntax
 ## Number declaration 
 ```

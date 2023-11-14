@@ -42,6 +42,7 @@ struct Node{
     char* strValue;  //IDENTIFIER nodes
     Node* left;
     Node* right;
+    int line;
 };
 
 Node *parser();

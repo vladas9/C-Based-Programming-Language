@@ -68,7 +68,7 @@ double interpret(Node *ast){
         // printf("declared successful\n");
         entry = findOrAddSymbolTableEntry(ast->left->strValue, 0, ast->type);
         if(entry){
-            printf("Variable %s already declared\n", ast->left->strValue);
+            printf("ERROR on line %i, Variable %s already declared\n",ast->line, ast->left->strValue);
             exit(EXIT_FAILURE);
         }else{
                 if(ast->type == DEC_DOUBLE_NODE){
@@ -88,7 +88,7 @@ double interpret(Node *ast){
         // printf("Start assignment\n");
         entry = findOrAddSymbolTableEntry(ast->strValue, 0, ast->type);
         if (!entry) {
-            printf("ERROR: undeclared variable %s\n", ast->strValue);
+            printf("ERROR: undeclared variable %s on line %i\n", ast->strValue, ast->line);
             exit(EXIT_FAILURE);
         }
         double leftVal = interpret(ast->left);
@@ -96,13 +96,13 @@ double interpret(Node *ast){
             if (isWholeNumber(leftVal)) {
                 entry->value.i_val = (int)leftVal;
             } else {
-                printf("Type mismatch: Cannot assign a non-integer value to an integer variable\n");
+                printf("Type mismatch on line %i: Cannot assign a non-integer value to an integer variable\n", ast->line);
                 exit(EXIT_FAILURE);
             }
         } else if (strcmp(entry->type, "double") == 0) {
             entry->value.d_val = leftVal;
         } else {
-            printf("Unknown variable type\n");
+            printf("Unknown variable type on line %i\n", ast->line);
             exit(EXIT_FAILURE);
         }
         interpret(ast->right);
@@ -116,7 +116,7 @@ double interpret(Node *ast){
                 return entry->value.d_val;
             }
         }else{
-            printf("ERROR: undeclared variable\n");
+            printf("ERROR: undeclared variable on line %i\n", ast->line);
             exit(EXIT_FAILURE);
         }
         break;
