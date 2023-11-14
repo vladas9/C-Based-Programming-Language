@@ -15,6 +15,9 @@ And after run, type the path to file that you want to interpret
     include/interpreter.h
 ##### Tokens:
     tokens/tokens.json
+##### cJSON library:
+    include/cJSON.c
+    include/cJSON.h
 
 # Syntax
 ## Number declaration 
